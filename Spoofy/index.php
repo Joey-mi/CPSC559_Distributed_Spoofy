@@ -1,6 +1,7 @@
 <?php
 include "modules/menubar.php";
 include "modules/mysql_connect.php";
+include "modules/python_connect.php";
 
 if(!isset($_SESSION)) { session_start(); }
 $loggedIn = isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"];
