@@ -1,10 +1,25 @@
 <?php
 include "../modules/menubar.php";
 include "../modules/mysql_connect.php";
+// include "../modules/python_connect.php";
 
 
 if(!isset($_SESSION)) { session_start(); }
 if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"]) {
+
+	// Create a TCP/IP socket
+	$host = '127.0.0.1';
+	$port = 9000;
+	$socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+	if ($socket === false) {
+	    echo "Failed to create socket: " . socket_strerror(socket_last_error()) . "\n";
+	    exit(1);
+	}
+	$result = socket_connect($socket, $host, $port);
+	if ($result === false) {
+	    echo "Failed to connect to server: " . socket_strerror(socket_last_error()) . "\n";
+	    exit(1);
+	}
 
 	// @todo: This throws a php notice if POST is called, as GET has no ArtistID index
 	$ArtistID = $_GET["ArtistID"];
@@ -58,6 +73,13 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
 			
 			// Prepare an insert statement
 			$sql = "UPDATE ARTIST SET Name=?, About=?, ProfilePicture=?, BannerPicture=? WHERE ArtistID=?";
+
+			// Send data to the server
+			$data = $sql;
+			socket_write($socket, $data, strlen($data));
+			$response = socket_read($socket, 1024);
+			socket_close($socket);
+
 			$prepare = mysqli_prepare($con, $sql);
 			if($prepare) {
 				
