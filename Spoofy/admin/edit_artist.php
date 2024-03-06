@@ -1,25 +1,11 @@
 <?php
 include "../modules/menubar.php";
 include "../modules/mysql_connect.php";
-// include "../modules/python_connect.php";
+require_once("../modules/python_connect.php"); // Make python_connect.php a requirement to run this file
 
 
 if(!isset($_SESSION)) { session_start(); }
 if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"]) {
-
-	// Create a TCP/IP socket
-	$host = '127.0.0.1';
-	$port = 9000;
-	$socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
-	if ($socket === false) {
-	    echo "Failed to create socket: " . socket_strerror(socket_last_error()) . "\n";
-	    exit(1);
-	}
-	$result = socket_connect($socket, $host, $port);
-	if ($result === false) {
-	    echo "Failed to connect to server: " . socket_strerror(socket_last_error()) . "\n";
-	    exit(1);
-	}
 
 	// @todo: This throws a php notice if POST is called, as GET has no ArtistID index
 	$ArtistID = $_GET["ArtistID"];
@@ -70,16 +56,27 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
 
 		// If there are no errors, insert into the database
 		if(empty($error_string)) {
+
+			// ************************************************************************************************************************************************************************************
+			// ************************************************************************************************************************************************************************************
+			// ************************************************************************************************************************************************************************************
+			// Proof of concept: 
+			// - Sends fully prepared SQL queries to Replication/php_python_communication_test.py
+			// - To run:
+			// 		- Run Replication/php_python_communication_test.py.
+			// 		- login as admin, select 'manage music', select 'manage artists', click 'edit' on any artist, then click 'submit'. 
+			//		- Output will be displayed in the terminal running Replication/php_python_communication_test.py.
+			$sql_test = "UPDATE ARTIST SET Name=$name, About=$about, ProfilePicture=$pfp, BannerPicture=$bp WHERE ArtistID=$ArtistID";
+			socket_write($socket, $sql_test, strlen($sql_test));
+			$response = socket_read($socket, 1024);
+			socket_close($socket);
+			// End proof of concept
+			// ************************************************************************************************************************************************************************************
+			// ************************************************************************************************************************************************************************************
+			// ************************************************************************************************************************************************************************************
 			
 			// Prepare an insert statement
 			$sql = "UPDATE ARTIST SET Name=?, About=?, ProfilePicture=?, BannerPicture=? WHERE ArtistID=?";
-
-			// Send data to the server
-			$data = $sql;
-			socket_write($socket, $data, strlen($data));
-			$response = socket_read($socket, 1024);
-			socket_close($socket);
-
 			$prepare = mysqli_prepare($con, $sql);
 			if($prepare) {
 				
