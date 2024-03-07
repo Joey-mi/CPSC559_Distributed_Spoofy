@@ -7,9 +7,9 @@ import mysql.connector
 import multiprocessing
 
 PHP_PORT_NUM = 9000
-debug = True
-localhost = '127.0.0.1'
-send_port = 10000
+DEBUG = True
+LOCALHOST = '127.0.0.1'
+SEND_PORT = 10000
 
 #==============================================================================
 # Prints debug messages to console.
@@ -20,7 +20,7 @@ send_port = 10000
 #==============================================================================
 def debug_print(msg: str):
     
-    if(debug):
+    if(DEBUG):
         print(msg)
 
 #==============================================================================
@@ -39,7 +39,7 @@ def listen_php():
 
     # start the socket
 
-    listener.bind((localhost, PHP_PORT_NUM))
+    listener.bind((LOCALHOST, PHP_PORT_NUM))
     listener.listen(5)
 
     return listener
@@ -51,10 +51,11 @@ def listen_php():
 # param php_listener: the socket used to communicate with the Spoofy website
 # param out_queue: the queue of statements that must be sent to the other server
 #                  replicas
+# parap pool: MySQL connection pool to pull a connection from
 #
 # return N/A
 #==============================================================================
-def retrieve_stmnts(php_listener: socket, out_queue: Queue):
+def retrieve_stmnts(php_listener: socket, out_queue: Queue, pool):
 
     data = b''        # data containing MySQL query received from website
     # chunks = []     # array of data received from Spoofy website
@@ -75,33 +76,31 @@ def retrieve_stmnts(php_listener: socket, out_queue: Queue):
     # format bytes received into a text string
 
     mysql_stmnt = data.decode()
+    debug_print(f'Message received is:\n\"{mysql_stmnt}\"')
 
     # setup a connection to the local copy of the MySQL database
 
-    spoofyDB = mysql.connector.connect(user='spoofyUser', password='testing',
-                                       host=localhost, database='SpoofyDB')
-    mycursor = spoofyDB.cursor()
-
-    debug_print(f'Message received is: {mysql_stmnt}')
+    spoofyDB = pool.get_connection()
+    cursor = spoofyDB.cursor()
 
     # execute the statement on the Spoofy database
 
     try:
-        with lock:
-            mycursor.execute(mysql_stmnt)
-            spoofyDB.commit()
+        cursor.execute(mysql_stmnt)
+        spoofyDB.commit()
+        debug_print('Database update completed\n')
     except:
+        debug_print('There was an error updating the database\n')
         spoofyDB.rollback()
 
-    # add the message to the queue to send to the other servers
+    # add the message to the out queue to send to the other servers
 
     out_queue.put(mysql_stmnt)
 
     # close connection to Spoofy database
 
-    mycursor.close()
+    cursor.close()
     spoofyDB.close()
-    debug_print('Database update completed\n')
 
     # close connection to the client
 
@@ -111,24 +110,20 @@ def retrieve_stmnts(php_listener: socket, out_queue: Queue):
 #==============================================================================
 # If the outgoing message queue has mesasges in it this will send it to every
 # replica corresponding to the IP addresses provided to the program on
-# execution.
+# startup.
 #
 # param out_queue: outgoing messages queue
 # param send_queue: list of IP addresses to send query to
-# param lock: used to lock database accesses
 #
 # return N/A
 #==============================================================================
-def send_stmnts(out_queue : Queue, send_queue, lock: Lock):
-
-    # msg_socket = socket.socket(socket.AF_INET, \
-    #                        socket.SOCK_STREAM)
+def send_stmnts(out_queue : Queue, send_queue):
 
     # continue running this as long as the program runs
 
     while True:
 
-        # while there are messages in the queue do the following
+        # while there are messages in the out queue do the following
 
         while not out_queue.empty():
 
@@ -142,11 +137,11 @@ def send_stmnts(out_queue : Queue, send_queue, lock: Lock):
                 try:
                     msg_socket = socket.socket(socket.AF_INET, \
                            socket.SOCK_STREAM)
-                    msg_socket.connect((ip, send_port)) 
+                    msg_socket.connect((ip, SEND_PORT)) 
                     msg_socket.send(msg)
-                    debug_print(f'Sent message:\n\"{msg.decode()}\"\nto {ip}')
+                    debug_print(f'Message sent to {ip}:\n\"{msg.decode()}\"')
                 except ConnectionRefusedError:
-                    print(f'The server {ip} refused the connection on port {send_port}\n')
+                    print(f'The server {ip} refused the connection on port {SEND_PORT}\n')
 
                 # close connection to this particular server
 
@@ -165,14 +160,23 @@ if __name__ == "__main__":
 
     out_queue = Queue()         # out queue of messages to send to other replicas
     php_listener = listen_php() # socket listening for messages from Spoofy website
-    lock = Lock()               # used when writing to database
+
+    # create connection pool for local MySQL database
+
+    spoofyDB_config = {"database": "SpoofyDB",
+                       "user":     "spoofyUser",
+                       "password": "testing",
+                       "host":     LOCALHOST}
+    db_pool = mysql.connector.pooling.MySQLConnectionPool(pool_name="pool", \
+                                                          **spoofyDB_config)
 
     debug_print(f'Replication sender started')
+
+    # start the thread to send database updates to the other servers
     
-    send_stmnts = Thread(target=send_stmnts, args=(out_queue, sys.argv[1:], lock), \
+    send_stmnts = Thread(target=send_stmnts, args=(out_queue, sys.argv[1:]), \
                          daemon=True)
     send_stmnts.start()
-
     debug_print(f'Send thread started')
 
     while True:
@@ -182,7 +186,7 @@ if __name__ == "__main__":
 
         (php_socket, addr) = php_listener.accept()
 
-        debug_print(f'Received connection from: {addr}')
+        debug_print(f'Received connection from {addr}:')
 
         threading.Thread(target=retrieve_stmnts, 
-                         args=(php_socket, out_queue,)).start()
+                         args=(php_socket, out_queue, db_pool)).start()
