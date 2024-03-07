@@ -27,8 +27,8 @@ def server_program():
     while True:
 
         conn, addr = server_socket.accept()
-        acceptance = input('1')
-        conn.send(acceptance.encode())
+        # acceptance = input('1')
+        # conn.send(acceptance.encode())
 
         u_thread = Thread(target=new_request_handler,args=(conn, db, cursor, lock, in_queue))
 
