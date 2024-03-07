@@ -45,12 +45,19 @@ function increment_song_plays($con, $songID) {
 
     $sql = "UPDATE ARTIST SET TotalPlays = TotalPlays + 1, MonthlyPlays = MonthlyPlays + 1 
             WHERE ArtistID IN (
-                SELECT ArtistID FROM WRITES WHERE SongID=?
+            SELECT ArtistID FROM WRITES WHERE SongID=$songID
             )";
-    $prepare = mysqli_prepare($con, $sql);
-    $prepare -> bind_param("s", $songID);
-    $prepare -> execute();
-    $prepare -> close();
+    sendQuery($sql);
+    // $sql = "UPDATE ARTIST SET TotalPlays = TotalPlays + 1, MonthlyPlays = MonthlyPlays + 1 
+    //         WHERE ArtistID IN (
+    //             SELECT ArtistID FROM WRITES WHERE SongID=?
+    //         )";
+    // $prepare = mysqli_prepare($con, $sql);
+    // $prepare -> bind_param("s", $songID);
+    // $prepare -> execute();
+    if($prepare){
+        $prepare -> close();
+    }
 }
 
 /* Notes:

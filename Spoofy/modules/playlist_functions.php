@@ -1,23 +1,30 @@
 <?php
+require_once("python_connect.php");
 function create_playlist($con, $playlist_name, $userID) {
-    $prepare = mysqli_prepare($con, "INSERT INTO PLAYLIST (PlaylistName, CreatorID) VALUES (?, ?)");
-    $prepare -> bind_param("ss", $playlist_name, $userID);
-    $prepare -> execute();
-    $prepare -> close();
+    $sql = "INSERT INTO PLAYLIST (PlaylistName, CreatorID) VALUES ($playlist_name, $userID)";
+    sendQuery($sql);
+    // $prepare = mysqli_prepare($con, "INSERT INTO PLAYLIST (PlaylistName, CreatorID) VALUES (?, ?)");
+    // $prepare -> bind_param("ss", $playlist_name, $userID);
+    // $prepare -> execute();
+    // $prepare -> close();
 }
 
 function delete_playlist($con, $playlistID) {
-    $prepare = mysqli_prepare($con, "DELETE FROM PLAYLIST WHERE PlaylistID=?");
-    $prepare -> bind_param("s", $playlistID);
-    $prepare -> execute();
-    $prepare -> close();
+    $sql = "DELETE FROM PLAYLIST WHERE PlaylistID=$playlistID";
+    sendQuery($sql);
+    // $prepare = mysqli_prepare($con, "DELETE FROM PLAYLIST WHERE PlaylistID=?");
+    // $prepare -> bind_param("s", $playlistID);
+    // $prepare -> execute();
+    // $prepare -> close();
 }
 
 function add_song($con, $playlistID, $songID) {
-    $prepare = mysqli_prepare($con, "INSERT INTO PLAYLIST_CONTAINS (PlaylistID, SongID) VALUES (?, ?)");
-    $prepare -> bind_param("ss", $playlistID, $songID);
-    $prepare -> execute();
-    $prepare -> close();
+    $sql = "INSERT INTO PLAYLIST_CONTAINS (PlaylistID, SongID) VALUES ($playlistID, $songID)";
+    sendQuery($sql);
+    // $prepare = mysqli_prepare($con, "INSERT INTO PLAYLIST_CONTAINS (PlaylistID, SongID) VALUES (?, ?)");
+    // $prepare -> bind_param("ss", $playlistID, $songID);
+    // $prepare -> execute();
+    // $prepare -> close();
 }
 
 function remove_song($con, $playlistID, $songID) {
@@ -29,10 +36,12 @@ function remove_song($con, $playlistID, $songID) {
     $prepare -> close();
     if (mysqli_num_rows($result) > 0) { return; }
 
-    $prepare = mysqli_prepare($con, "DELETE FROM PLAYLIST_CONTAINS WHERE PlaylistID=? AND SongID=?");
-    $prepare -> bind_param("ss", $playlistID, $songID);
-    $prepare -> execute();
-    $prepare -> close();
+    $sql = "DELETE FROM PLAYLIST_CONTAINS WHERE PlaylistID=$playlistID AND SongID=$songID";
+    sendQuery($sql);
+    // $prepare = mysqli_prepare($con, "DELETE FROM PLAYLIST_CONTAINS WHERE PlaylistID=? AND SongID=?");
+    // $prepare -> bind_param("ss", $playlistID, $songID);
+    // $prepare -> execute();
+    // $prepare -> close();
 }
 
 function play_playlist($con, $playlistID) {
