@@ -1,7 +1,7 @@
 import socket
 import sys
 import threading
-from threading import Thread
+from threading import Thread, Lock
 from queue import Queue
 import mysql.connector
 import multiprocessing
@@ -56,7 +56,7 @@ def listen_php():
 #==============================================================================
 def retrieve_stmnts(php_listener: socket, out_queue: Queue):
 
-    data = b''
+    data = b''        # data containing MySQL query received from website
     # chunks = []     # array of data received from Spoofy website
     # bytes_recvd = 0 # number of bytes received from Spoofy website
 
@@ -87,8 +87,9 @@ def retrieve_stmnts(php_listener: socket, out_queue: Queue):
     # execute the statement on the Spoofy database
 
     try:
-        mycursor.execute(mysql_stmnt)
-        spoofyDB.commit()
+        with lock:
+            mycursor.execute(mysql_stmnt)
+            spoofyDB.commit()
     except:
         spoofyDB.rollback()
 
@@ -113,10 +114,15 @@ def retrieve_stmnts(php_listener: socket, out_queue: Queue):
 # execution.
 #
 # param out_queue: outgoing messages queue
+# param send_queue: list of IP addresses to send query to
+# param lock: used to lock database accesses
 #
 # return N/A
 #==============================================================================
-def send_stmnts(out_queue : Queue, send_queue):
+def send_stmnts(out_queue : Queue, send_queue, lock: Lock):
+
+    # msg_socket = socket.socket(socket.AF_INET, \
+    #                        socket.SOCK_STREAM)
 
     # continue running this as long as the program runs
 
@@ -133,15 +139,14 @@ def send_stmnts(out_queue : Queue, send_queue):
             # send the message to every other server in the DS
 
             for ip in send_queue:
-                msg_socket = socket.socket(socket.AF_INET, \
-                                           socket.SOCK_STREAM)
                 try:
+                    msg_socket = socket.socket(socket.AF_INET, \
+                           socket.SOCK_STREAM)
                     msg_socket.connect((ip, send_port)) 
                     msg_socket.send(msg)
+                    debug_print(f'Sent message:\n\"{msg.decode()}\"\nto {ip}')
                 except ConnectionRefusedError:
                     print(f'The server {ip} refused the connection on port {send_port}\n')
-
-                debug_print(f'Sent message:\n\"{msg.decode()}\"\nto {ip}')
 
                 # close connection to this particular server
 
@@ -160,10 +165,11 @@ if __name__ == "__main__":
 
     out_queue = Queue()         # out queue of messages to send to other replicas
     php_listener = listen_php() # socket listening for messages from Spoofy website
+    lock = Lock()               # used when writing to database
 
     debug_print(f'Replication sender started')
     
-    send_stmnts = Thread(target=send_stmnts, args=(out_queue, sys.argv[1:]), \
+    send_stmnts = Thread(target=send_stmnts, args=(out_queue, sys.argv[1:], lock), \
                          daemon=True)
     send_stmnts.start()
 
