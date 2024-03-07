@@ -9,6 +9,7 @@ import multiprocessing
 PHP_PORT_NUM = 9000
 debug = True
 localhost = '127.0.0.1'
+send_port = 10000
 
 #==============================================================================
 # Prints debug messages to console.
@@ -134,14 +135,19 @@ def send_stmnts(out_queue : Queue, send_queue):
             for ip in send_queue:
                 msg_socket = socket.socket(socket.AF_INET, \
                                            socket.SOCK_STREAM)
-                msg_socket.connect(ip, 10000) 
-                msg_socket.send(msg)
+                try:
+                    msg_socket.connect((ip, send_port)) 
+                    msg_socket.send(msg)
+                except ConnectionRefusedError:
+                    print(f'The server {ip} refused the connection on port {send_port}\n')
 
-                debug_print(f'Send {msg} to {ip}')
+                debug_print(f'Sent message:\n\"{msg.decode()}\"\nto {ip}')
 
                 # close connection to this particular server
 
                 msg_socket.close()
+
+                debug_print('Message sent\n')
 
                 ## may implement this send while loop if we decide to allow the
                 ## sending of actual music files
