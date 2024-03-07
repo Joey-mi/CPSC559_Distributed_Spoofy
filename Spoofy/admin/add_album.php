@@ -1,6 +1,7 @@
 <?php
 include "../modules/menubar.php";
 include "../modules/mysql_connect.php";
+require_once("../modules/python_connect.php");
 
 if(!isset($_SESSION)) { session_start(); }
 if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"]){
@@ -53,14 +54,16 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
 		if(empty($error_string)) {
 			
 			// Prepare an insert statement
-			$sql = "INSERT INTO ALBUM (Title, IsSingle, CoverArt, ReleaseDate, Genre) VALUES (?, ?, ?, ?, ?)";
-			$prepare = mysqli_prepare($con, $sql);
+			$sql = "INSERT INTO ALBUM (Title, IsSingle, CoverArt, ReleaseDate, Genre) VALUES ($title, $single, $cover, $release, $genre)";
+			sendQuery($sql);
+			// $sql = "INSERT INTO ALBUM (Title, IsSingle, CoverArt, ReleaseDate, Genre) VALUES (?, ?, ?, ?, ?)";
+			// $prepare = mysqli_prepare($con, $sql);
 			if($prepare) {
 				
-				// Bind all values
-				$prepare -> bind_param("sssss", $title, $single, $cover, $release, $genre);
-				$prepare -> execute();
-				$result = $prepare -> get_result();
+				// // Bind all values
+				// $prepare -> bind_param("sssss", $title, $single, $cover, $release, $genre);
+				// $prepare -> execute();
+				// $result = $prepare -> get_result();
 				
 				// Redirect to login page after registering
 				header("location: manage_albums.php");

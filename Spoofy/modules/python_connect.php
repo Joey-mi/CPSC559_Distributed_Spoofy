@@ -1,6 +1,6 @@
 <?php
 
-function sendStmnt($stmnt){
+function sendQuery($query){
 
     $socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
     if ($socket === false) {
@@ -14,7 +14,7 @@ function sendStmnt($stmnt){
         exit(1);
     }
 
-    socket_write($socket, $stmnt, strlen($stmnt));
+    socket_write($socket, $query, strlen($query));
     socket_close($socket);
 }
 

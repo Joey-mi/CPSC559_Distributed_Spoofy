@@ -1,6 +1,7 @@
 <?php
 include "../modules/menubar.php";
 include "../modules/mysql_connect.php";
+require_once("../modules/python_connect.php");
 
 if(!isset($_SESSION)) { session_start(); }
 if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"]) {
@@ -38,13 +39,15 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
         // If there are no errors, insert into the database
         if(empty($error_string)) {
             // Prepare an insert statement
-            $sql = "INSERT INTO ADVERTISEMENT (duration, company, soundfile) VALUES (?, ?, ?)";
-            $prepare = mysqli_prepare($con, $sql);
+            $sql = "INSERT INTO ADVERTISEMENT (duration, company, soundfile) VALUES ($duration, $company, $soundfile)";
+            sendQuery($sql);
+            // $sql = "INSERT INTO ADVERTISEMENT (duration, company, soundfile) VALUES (?, ?, ?)";
+            // $prepare = mysqli_prepare($con, $sql);
             if($prepare) {
-                $prepare -> bind_param("sss", $duration, $company, $soundfile);    //no idea what the ss does
+                // $prepare -> bind_param("sss", $duration, $company, $soundfile);    //no idea what the ss does
 
-                $prepare -> execute();
-                $result = $prepare -> get_result();
+                // $prepare -> execute();
+                // $result = $prepare -> get_result();
                 
                 // Reload the page after adding an ad
                 header("location: manage_ads.php");

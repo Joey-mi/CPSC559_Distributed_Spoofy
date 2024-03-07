@@ -52,17 +52,24 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
 		// TODO: Actual validation checks
 		$bp = trim($_POST["bp"]);
 		
-		
-
 		// If there are no errors, insert into the database
 		if(empty($error_string)) {
 
-			$sql_test = "UPDATE ARTIST SET Name='$name', About='$about', ProfilePicture='$pfp', BannerPicture='$bp' WHERE ArtistID=$ArtistID";
-			sendStmnt($sql_test);
+			$sql = "UPDATE ARTIST SET Name='$name', About='$about', ProfilePicture='$pfp', BannerPicture='$bp' WHERE ArtistID=$ArtistID";
+			sendQuery($sql);
+			// $sql = "UPDATE ARTIST SET Name=?, About=?, ProfilePicture=?, BannerPicture=? WHERE ArtistID=?";
+			// $prepare = mysqli_prepare($con, $sql);
+			if($prepare) {
 				
-			// Redirect to login page after registering
-			header("location: manage_artists.php");
-			$prepare -> close();
+				// // Bind all values
+				// $prepare -> bind_param("sssss", $name, $about, $pfp, $bp, $ArtistID);
+				// $prepare -> execute();
+				// $result = $prepare -> get_result();
+				
+				// Redirect to login page after registering
+				header("location: manage_artists.php");
+				$prepare -> close();
+			}
 		}
 		
 		// Close connection

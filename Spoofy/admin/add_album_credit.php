@@ -1,6 +1,7 @@
 <?php
 include "../modules/mysql_connect.php";
 include "../modules/menubar.php";
+require_once("../modules/python_connect.php");
 
 if(!isset($_SESSION)) { session_start(); }
 if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"]) {
@@ -8,13 +9,15 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
 		$AlbumID = $_POST["AlbumID"];
 		$ArtistID = $_POST["ArtistID"];
 
-		$sql = "INSERT INTO HAS VALUES(?,?)";
-		$prepare = mysqli_prepare($con, $sql);
+		$sql = "INSERT INTO HAS VALUES($AlbumID,$ArtistID)";
+		sendQuery($sql);
+		// $sql = "INSERT INTO HAS VALUES(?,?)";
+		// $prepare = mysqli_prepare($con, $sql);
 		if($prepare) {
-			// Bind all values
-			$prepare -> bind_param("ss", $AlbumID, $ArtistID);
-			$prepare -> execute();
-			$result = $prepare -> get_result();
+			// // Bind all values
+			// $prepare -> bind_param("ss", $AlbumID, $ArtistID);
+			// $prepare -> execute();
+			// $result = $prepare -> get_result();
 			
 			header("location: manage_albums.php");
 			$prepare -> close();

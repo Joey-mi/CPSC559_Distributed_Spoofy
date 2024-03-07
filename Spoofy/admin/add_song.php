@@ -1,6 +1,7 @@
 <?php
 include "../modules/menubar.php";
 include "../modules/mysql_connect.php";
+require_once("../modules/python_connect.php");
 
 if(!isset($_SESSION)) { session_start(); }
 if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"]){
@@ -36,14 +37,16 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
 		if(empty($error_string)) {
 			
 			// Prepare an insert statement
-			$sql = "INSERT INTO SONG (Title, Duration, MusicFile, TotalPlays, MonthlyPlays) VALUES (?, ?, ?, 0, 0)";
-			$prepare = mysqli_prepare($con, $sql);
+			$sql = "INSERT INTO SONG (Title, Duration, MusicFile, TotalPlays, MonthlyPlays) VALUES ($title, $duration, $filepath, 0, 0)";
+			sendQuery($sql);
+			// $sql = "INSERT INTO SONG (Title, Duration, MusicFile, TotalPlays, MonthlyPlays) VALUES (?, ?, ?, 0, 0)";
+			// $prepare = mysqli_prepare($con, $sql);
 			if($prepare) {
 				
-				// Bind all values
-				$prepare -> bind_param("sss", $title, $duration, $filepath);
-				$prepare -> execute();
-				$result = $prepare -> get_result();
+				// // Bind all values
+				// $prepare -> bind_param("sss", $title, $duration, $filepath);
+				// $prepare -> execute();
+				// $result = $prepare -> get_result();
 				
 				// Redirect to login page after registering
 				header("location: manage_songs.php");

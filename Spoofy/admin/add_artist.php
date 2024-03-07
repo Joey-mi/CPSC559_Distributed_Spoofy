@@ -1,6 +1,7 @@
 <?php
 include "../modules/menubar.php";
 include "../modules/mysql_connect.php";
+require_once("../modules/python_connect.php");
 
 if(!isset($_SESSION)) { session_start(); }
 if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"]){
@@ -39,14 +40,16 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
 		if(empty($error_string)) {
 			
 			// Prepare an insert statement
-			$sql = "INSERT INTO ARTIST (Name, About, ProfilePicture, BannerPicture, TotalPlays, MonthlyPlays) VALUES (?, ?, ?, ?, 0, 0)";
-			$prepare = mysqli_prepare($con, $sql);
+			$sql = "INSERT INTO ARTIST (Name, About, ProfilePicture, BannerPicture, TotalPlays, MonthlyPlays) VALUES ($name, $about, $pfp, $bp, 0, 0)";
+			sendQuery($sql);
+			// $sql = "INSERT INTO ARTIST (Name, About, ProfilePicture, BannerPicture, TotalPlays, MonthlyPlays) VALUES (?, ?, ?, ?, 0, 0)";
+			// $prepare = mysqli_prepare($con, $sql);
 			if($prepare) {
 				
-				// Bind all values
-				$prepare -> bind_param("ssss", $name, $about, $pfp, $bp);
-				$prepare -> execute();
-				$result = $prepare -> get_result();
+				// // Bind all values
+				// $prepare -> bind_param("ssss", $name, $about, $pfp, $bp);
+				// $prepare -> execute();
+				// $result = $prepare -> get_result();
 				
 				// Redirect to login page after registering
 				header("location: manage_artists.php");
