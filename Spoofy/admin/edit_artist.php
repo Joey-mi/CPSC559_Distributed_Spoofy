@@ -1,6 +1,7 @@
 <?php
 include "../modules/menubar.php";
 include "../modules/mysql_connect.php";
+require_once("../modules/python_connect.php"); // Make python_connect.php a requirement to run this file
 
 
 if(!isset($_SESSION)) { session_start(); }
@@ -55,21 +56,39 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
 
 		// If there are no errors, insert into the database
 		if(empty($error_string)) {
+
+			// ************************************************************************************************************************************************************************************
+			// ************************************************************************************************************************************************************************************
+			// ************************************************************************************************************************************************************************************
+			// Proof of concept: 
+			// - Sends fully prepared SQL queries to Replication/php_python_communication_test.py
+			// - To run:
+			// 		- Run Replication/php_python_communication_test.py.
+			// 		- login as admin, select 'manage music', select 'manage artists', click 'edit' on any artist, then click 'submit'. 
+			//		- Output will be displayed in the terminal running Replication/php_python_communication_test.py.
+			$sql_test = "UPDATE ARTIST SET Name='$name', About='$about', ProfilePicture='$pfp', BannerPicture='$bp' WHERE ArtistID=$ArtistID";
+			// socket_write($socket, $sql_test, strlen($sql_test));
+			// $response = socket_read($socket, 1024);
+			// socket_close($socket);
+			sendStmnt($sql_test);
+			// End proof of concept			// ************************************************************************************************************************************************************************************
+			// ************************************************************************************************************************************************************************************
+			// ************************************************************************************************************************************************************************************
 			
-			// Prepare an insert statement
-			$sql = "UPDATE ARTIST SET Name=?, About=?, ProfilePicture=?, BannerPicture=? WHERE ArtistID=?";
-			$prepare = mysqli_prepare($con, $sql);
-			if($prepare) {
+			// // Prepare an insert statement
+			// $sql = "UPDATE ARTIST SET Name=?, About=?, ProfilePicture=?, BannerPicture=? WHERE ArtistID=?";
+			// $prepare = mysqli_prepare($con, $sql);
+			// if($prepare) {
 				
-				// Bind all values
-				$prepare -> bind_param("sssss", $name, $about, $pfp, $bp, $ArtistID);
-				$prepare -> execute();
-				$result = $prepare -> get_result();
+			// 	// Bind all values
+			// 	$prepare -> bind_param("sssss", $name, $about, $pfp, $bp, $ArtistID);
+			// 	$prepare -> execute();
+			// 	$result = $prepare -> get_result();
 				
 				// Redirect to login page after registering
 				header("location: manage_artists.php");
 				$prepare -> close();
-			}
+			// }
 		}
 		
 		// Close connection
