@@ -68,6 +68,7 @@ def atomic_database(in_queue, pool):
                 db.commit()
                 print("Database update complete\n")
             except:
+                print("There was an error updating the database\n")
                 db.rollback()
 
             cursor.close()
