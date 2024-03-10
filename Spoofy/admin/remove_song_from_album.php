@@ -18,7 +18,8 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
     if ($prepare) {
         $prepare -> close();
     }
-    header("location: remove_album_contains.php?AlbumID=" . $AlbumID . "");
+    header("Refresh:0; url=remove_album_contains.php?AlbumID=" . $AlbumID . "");
+    // header("location: remove_album_contains.php?AlbumID=" . $AlbumID . "");
 } else {
     header("location: ../error.php");
 }

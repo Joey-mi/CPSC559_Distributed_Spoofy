@@ -16,7 +16,8 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
     if ($prepare) {
         $prepare -> close();
     }
-    header("location: manage_ads.php");
+    header("Refresh:0; url=manage_ads.php");
+    // header("location: manage_ads.php");
 } else {
     header("location: ../error.php");
 }

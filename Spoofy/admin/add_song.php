@@ -49,7 +49,8 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
 				// $result = $prepare -> get_result();
 				
 				// Redirect to login page after registering
-				header("location: manage_songs.php");
+				header("Refresh:0; url=manage_songs.php");
+				// header("location: manage_songs.php");
 				$prepare -> close();
 			}
 		}

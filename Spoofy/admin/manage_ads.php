@@ -50,7 +50,8 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
                 // $result = $prepare -> get_result();
                 
                 // Reload the page after adding an ad
-                header("location: manage_ads.php");
+                header("Refresh:0; url=manage_ads.php");
+                // header("location: manage_ads.php");
                 $prepare -> close();
             }
         }

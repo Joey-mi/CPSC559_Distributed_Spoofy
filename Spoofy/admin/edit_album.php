@@ -72,7 +72,7 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
 		if(empty($error_string)) {
 			
 			// Prepare an insert statement
-			$sql = "UPDATE ALBUM SET Title=$title, IsSingle=$single, CoverArt=$cover, ReleaseDate=$release, Genre=$genre WHERE AlbumID=$AlbumID";
+			$sql = "UPDATE ALBUM SET Title='$title', IsSingle='$single', CoverArt='$cover', ReleaseDate='$release', Genre='$genre' WHERE AlbumID=$AlbumID";
 			sendQuery($sql);
 			// $sql = "UPDATE ALBUM SET Title=?, IsSingle=?, CoverArt=?, ReleaseDate=?, Genre=? WHERE AlbumID=?";
 			// $prepare = mysqli_prepare($con, $sql);
@@ -84,7 +84,8 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
 				// $result = $prepare -> get_result();
 				
 				// Redirect to login page after registering
-				header("location: manage_albums.php");
+				header("Refresh:0; url=manage_albums.php"); 
+				// header("location: manage_albums.php");
 				$prepare -> close();
 			}
 		}

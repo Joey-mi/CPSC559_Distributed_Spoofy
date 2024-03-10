@@ -42,7 +42,8 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
             $prepare -> close();
         }
     }
-    header("location: /admin/manage_users.php");
+    header("Refresh:0; url=manage_users.php");
+    // header("location: /admin/manage_users.php");
 } else {
     // Someone not logged in is trying to update premium
     header("location: ../error.php");

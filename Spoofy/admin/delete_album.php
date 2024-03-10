@@ -16,7 +16,8 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
     if ($prepare) {
         $prepare -> close();
     }
-    header("location: manage_albums.php");
+    header("Refresh:0; url=manage_albums.php"); 
+    // header("location: manage_albums.php");
 } else {
     header("location: ../error.php");
 }

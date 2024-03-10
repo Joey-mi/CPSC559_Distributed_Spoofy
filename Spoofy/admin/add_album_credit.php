@@ -18,8 +18,8 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
 			// $prepare -> bind_param("ss", $AlbumID, $ArtistID);
 			// $prepare -> execute();
 			// $result = $prepare -> get_result();
-			
-			header("location: manage_albums.php");
+			header("Refresh:0; url=manage_albums.php"); 
+			// header("location: manage_albums.php");
 			$prepare -> close();
 		}
 	}

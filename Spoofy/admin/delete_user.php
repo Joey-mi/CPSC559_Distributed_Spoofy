@@ -17,7 +17,8 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
     if ($prepare) {
         $prepare -> close();
     }
-    header("location: manage_users.php");
+    header("Refresh:0; url=manage_users.php");
+    // header("location: manage_users.php");
 } else {
     header("location: ../error.php");
 }

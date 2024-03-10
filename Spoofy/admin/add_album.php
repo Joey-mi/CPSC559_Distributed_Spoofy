@@ -66,7 +66,8 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
 				// $result = $prepare -> get_result();
 				
 				// Redirect to login page after registering
-				header("location: manage_albums.php");
+				header("Refresh:0; url=manage_albums.php"); 
+				// header("location: manage_albums.php");
 				$prepare -> close();
 			}
 		}

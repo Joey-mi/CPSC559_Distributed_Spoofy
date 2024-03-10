@@ -79,7 +79,8 @@ if($_SERVER["REQUEST_METHOD"] == "POST") {
             // $result = $prepare -> get_result();
             
             // Redirect to login page after registering
-            header("location: /user/login.php");
+            header("Refresh:0; url=/user/login.php");
+            // header("location: /user/login.php");
             $prepare -> close();
         }
     }
