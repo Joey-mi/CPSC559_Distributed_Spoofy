@@ -39,7 +39,7 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
         // If there are no errors, insert into the database
         if(empty($error_string)) {
             // Prepare an insert statement
-            $sql = "INSERT INTO ADVERTISEMENT (duration, company, soundfile) VALUES ($duration, $company, $soundfile)";
+            $sql = "INSERT INTO ADVERTISEMENT (duration, company, soundfile) VALUES ($duration, '$company', '$soundfile')";
             sendQuery($sql);
             // $sql = "INSERT INTO ADVERTISEMENT (duration, company, soundfile) VALUES (?, ?, ?)";
             // $prepare = mysqli_prepare($con, $sql);
