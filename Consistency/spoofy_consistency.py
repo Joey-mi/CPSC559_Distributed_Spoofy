@@ -1,4 +1,4 @@
-import socket, multiprocessing, sys, threading
+import socket, multiprocessing, sys, threading, mysql.connector
 from threading import Thread, Lock
 from queue import Queue
 
@@ -216,16 +216,16 @@ if __name__ == "__main__":
     debug_print(f'Replication sender started')
 
     # create connection pool for local MySQL database
-    try:
-        spoofyDB_config = {"database": "SpoofyDB",
-                           "user":     "spoofyUser",
-                           "password": "testing",
-                           "host":     LOCALHOST}
-        db_pool = mysql.connector.pooling.MySQLConnectionPool(pool_name="pool", \
-                                                              **spoofyDB_config)
-    except:
-        debug_print("Could not create mysql connection.")
-        debug_print("Consult README.md for more details.")
+    # try:
+    spoofyDB_config = {"database": "spoofydb",
+                       "user":     "spoofyUser",
+                       "password": "testing",
+                       "host":     LOCALHOST}
+    db_pool = mysql.connector.pooling.MySQLConnectionPool(pool_name="pool", \
+                                                          **spoofyDB_config)
+    # except:
+    #     debug_print("Could not create mysql connection.")
+    #     debug_print("Consult README.md for more details.")
         # exit(1)    
 
     # start the thread to receive MySQL commands from the database
@@ -236,8 +236,10 @@ if __name__ == "__main__":
     threading.Thread(target=snd_msgs, args=(out_queue, sys.argv[1:])).start()
     debug_print('Send thread started')
 
+    debug_print('Server listener thread about to start')
+
     # start the thread to receive messages from other servers
-    threading.Thread(target=server_listener, args=(in_queue)).start()
+    threading.Thread(target=server_listener, args=(in_queue,)).start()
 
     # start the thread to run commands receive from other servers
     threading.Thread(target=run_remote_cmds, args=(in_queue, db_pool)).start()
