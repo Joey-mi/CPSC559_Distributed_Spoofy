@@ -32,6 +32,6 @@ if (!$loggedIn) {
 <html>
     <head>
     <link href="/styles/style.css" rel="stylesheet" />
-        <title>CPSC 471 - Spoofy</title>
+        <title>CPSC 559 - Spoofy</title>
     </head>
 </html>
