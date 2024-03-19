@@ -27,6 +27,7 @@ def server_program():
     else:
         hostname = socket.gethostname()
         ip = socket.gethostbyname(hostname + ".local")
+        print(f"Local IP addr is: {ip}")
 
     server_socket.bind((ip, LISTENFOR))
     print("Server binded")

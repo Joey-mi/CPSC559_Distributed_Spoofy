@@ -1,4 +1,6 @@
+import os
 import socket, multiprocessing, sys, threading, mysql.connector
+import netifaces
 from threading import Thread, Lock, Event
 from queue import Queue
 from collections import deque
@@ -51,7 +53,13 @@ def run_cmd(php_listener: socket, out_queue: Queue, pool, acks: deque, \
 
     # determine local IP addr
     hostname = socket.gethostname()
-    local_ip = socket.gethostbyname(hostname + '.local')
+    # local_ip = socket.gethostbyname(hostname + '.local')
+    if os.getenv('MACHINE') == 'MacOs':
+        local_ip = netifaces.ifaddresses('en0')[netifaces.AF_INET][0]['addr']
+        print(f"Local IP addr is: {local_ip}")
+    else:
+        hostname = socket.gethostname()
+        local_ip = socket.gethostbyname(hostname + ".local")
 
     # receive data from client
     data = php_listener.recv(PACKET_SIZE)
@@ -334,8 +342,15 @@ def server_listener(in_queue: Queue, out_queue: Queue, acks: deque, \
 
     # create a socket to listen for messages from other servers
     server_listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    hostname = socket.gethostname()
-    ip = socket.gethostbyname(hostname + '.local')
+    # ip = socket.gethostbyname(hostname + '.local')
+
+    if os.getenv('MACHINE') == 'MacOs':
+        ip = netifaces.ifaddresses('en0')[netifaces.AF_INET][0]['addr']
+        print(f"Local IP addr is: {ip}")
+    else:
+        hostname = socket.gethostname()
+        ip = socket.gethostbyname(hostname + ".local")
+
     debug_print(f"Local IP addr is: {ip}")
 
     # start listening for other servers
@@ -419,8 +434,14 @@ def process_ips(ip_addrs: list):
     '''
 
     # determine local IP
-    hostname = socket.gethostname()
-    ip = socket.gethostbyname(hostname + '.local')
+    # hostname = socket.gethostname()
+    # ip = socket.gethostbyname(hostname + '.local')
+    if os.getenv('MACHINE') == 'MacOs':
+        ip = netifaces.ifaddresses('en0')[netifaces.AF_INET][0]['addr']
+        print(f"Local IP addr is: {ip}")
+    else:
+        hostname = socket.gethostname()
+        ip = socket.gethostbyname(hostname + ".local") 
 
     # sort the list of replica IPs in ascending order
     sorted_ips = sorted(ip_addrs)
