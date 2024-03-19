@@ -1,22 +1,32 @@
-import mysql.connector, sys
+import mysql.connector
 import socket
+import netifaces
 import sys
-from threading import Thread, Lock
+import os
+from dotenv import load_dotenv
+from pathlib import Path
+from threading import Thread
 from queue import Queue
 
 LISTENFOR = 10000
 LOCALHOST = "127.0.0.1"
+dotenv_path = Path('../.env')
 
 def server_program():
+    load_dotenv(dotenv_path=dotenv_path)
 
     in_queue = Queue()
     db_conns = establish_connection()
 
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     print("Server socket open")
-    hostname = socket.gethostname()
-    ip = socket.gethostbyname(hostname + ".local")
-    print(f"Local IP addr is: {ip}")
+
+    if os.getenv('MACHINE') == 'MacOs':
+        ip = netifaces.ifaddresses('en0')[netifaces.AF_INET][0]['addr']
+        print(f"Local IP addr is: {ip}")
+    else:
+        hostname = socket.gethostname()
+        ip = socket.gethostbyname(hostname + ".local")
 
     server_socket.bind((ip, LISTENFOR))
     print("Server binded")
