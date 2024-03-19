@@ -1,6 +1,6 @@
-# CPSC471_Spoofy
+# CPSC559_Spoofy
 
-A web application for CPSC 471 - Databases
+A web application for CPSC 559 - Databases
 
 See the [Final Report](Reports/Final_Report.pdf) for more details.
 

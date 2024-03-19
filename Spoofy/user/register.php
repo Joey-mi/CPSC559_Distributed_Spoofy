@@ -65,7 +65,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST") {
     if(empty($error_string)) {
         
         // Prepare an insert statement
-        $sql = "INSERT INTO USER (Username, PasswordHash, IsPremium) VALUES ($username, $password_hash, FALSE)";
+        $sql = "INSERT INTO USER (Username, PasswordHash, IsPremium) VALUES ('$username', $password_hash, FALSE)";
         sendQuery($sql);
         // $sql = "INSERT INTO USER (Username, PasswordHash, IsPremium) VALUES (?, ?, FALSE)";
         // $prepare = mysqli_prepare($con, $sql);
