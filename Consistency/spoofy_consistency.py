@@ -1,6 +1,8 @@
 import os
+import time
 import socket, multiprocessing, sys, threading, mysql.connector
 import netifaces
+from dotenv import load_dotenv
 from threading import Thread, Lock, Event
 from queue import Queue
 from collections import deque
@@ -12,6 +14,8 @@ SERVER_SERVER_PORT = 10000  # port to send and receive messages between servers
 PACKET_SIZE = 4096          # default size of packets to send and receive
 TOKEN_MSG = 'Token~WR'      # token message inidicating local writes can be done
 
+neighour = ""
+snd_list = []
 #==============================================================================
 def debug_print(msg: str):
     '''
@@ -48,6 +52,7 @@ def run_cmd(php_listener: socket, out_queue: Queue, pool, acks: deque, \
 
     return N/A
     '''
+    global snd_list
 
     data = b''        # data containing MySQL query received from website
 
@@ -100,9 +105,20 @@ def run_cmd(php_listener: socket, out_queue: Queue, pool, acks: deque, \
     cursor.close()
     spoofyDB.close()
 
-    # wait for ack from all other replicas that the write was performed
-    while not acks_rcvd(acks, mysql_stmnt, num_acks, local_ip):
-        wait = 0
+    ack_check = False
+
+    while not ack_check:
+        ### NEW ###
+        ack_check = acks_rcvd(acks, mysql_stmnt, len(snd_list), local_ip)
+        # wait for ack from all other replicas that the write was performed
+        # while not acks_rcvd(acks, mysql_stmnt, num_acks, local_ip):
+        #     wait = 0
+
+        if not ack_check:
+            # deque([])
+            # health_check(acks, mysql_stmnt, num_acks, local_ip)
+            out_queue.put('HEALTH~')
+
 
     # add token to out queue and inidicate that no writing needs to be done
     # locally
@@ -135,8 +151,14 @@ def acks_rcvd(acks: deque, mysql_stmnt: str, num_acks: int, ip: str):
     # while the number of acks received doesn't equal the expected number of
     # acks, wait
 
+    restart_timer = time.time()
+    timeout = 3
+
     while len(acks) != num_acks:
         wait = 0
+        if restart_timer + timeout > time.time():
+            break
+            
 
     # When the expected number of acks are received check them all and see if
     # they are acks, that they are meant to reply to this replica and that
@@ -152,7 +174,7 @@ def acks_rcvd(acks: deque, mysql_stmnt: str, num_acks: int, ip: str):
     # empty the acks list
     acks.clear()
 
-    # if the expected number of acks are received return True, eles False
+    # if the expected number of acks are received return True, else False
     if acks_rcvd == num_acks:
         return True
     else :
@@ -162,7 +184,7 @@ def acks_rcvd(acks: deque, mysql_stmnt: str, num_acks: int, ip: str):
 #==============================================================================
 
 #==============================================================================
-def snd_msgs(out_queue : Queue, send_list: list, neighbour: str, init: str):
+def snd_msgs(out_queue : Queue, init: str):
 
     '''
     If the outgoing message queue has mesasges in it this will send it to 
@@ -178,6 +200,8 @@ def snd_msgs(out_queue : Queue, send_list: list, neighbour: str, init: str):
         
     return N/A
     '''
+    global neighbour
+    global snd_list
 
     # create a socket for sending messages
     msg_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -205,30 +229,79 @@ def snd_msgs(out_queue : Queue, send_list: list, neighbour: str, init: str):
 
             if 'ACK~' in msg:
                 contents = msg.split('~')
-                msg_socket.connect((contents[1], SERVER_SERVER_PORT)) 
+                msg_socket.connect((contents[1], SERVER_SERVER_PORT))
                 msg_socket.send(msg.encode())
                 msg_socket.close()
 
             # if the message is the token pass it on to this replica's neighbour
 
             elif TOKEN_MSG in msg:
-                msg_socket.connect((neighbour, SERVER_SERVER_PORT)) 
-                msg_socket.send(msg.encode())
+                try:
+                    msg_socket.connect((neighbour, SERVER_SERVER_PORT)) 
+                    msg_socket.sendall(msg.encode())
+                except Exception as e:
+                    msg_socket.close()
+                    # unable to pass the token
+                    notify_lost_neighbour = 'LOST~' + neighbour
+
+                    # send_list.remove(neighbour)
+                    # (neighbour, _) = process_ips(send_list)
+
+                    # Here I want to notify everyone else in the send_list to remove
+                    # msg_socket.connect((neighbour, SERVER_SERVER_PORT))
+                    # msg_socket.send(notify_lost_neighbour.encode())
+
+                    # msg_socket.send(msg.encode())
+                    out_queue.put(notify_lost_neighbour)
+
                 debug_print(f'Token forwarded to \'{neighbour}\'')
                 msg_socket.close()
+
+            # If the message is a health check
+            elif 'HEALTH~' in msg:
+                # send the message to every other server in the DS
+                for ip in snd_list:
+                    try:
+                        msg_socket.connect((ip, SERVER_SERVER_PORT))
+                        msg_socket.sendall(msg.encode())
+                        debug_print(f'Health Check sent to {ip}:\n\"{msg}\"')
+                    except ConnectionRefusedError:
+                        debug_print(f'The server {ip} refused the connection on port {SERVER_SERVER_PORT}\n')
+                        out_queue.put('LOST~' + ip)
+
+                    # close connection to this particular server
+                    msg_socket.close()
+
+            # Notify of server going down
+            elif 'LOST~' in msg:
+                lost_ip = msg.split('~')
+                for ip in snd_list:
+                    try:
+                        msg_socket.connect((ip, SERVER_SERVER_PORT))
+                        msg_socket.send(msg.encode())
+                        debug_print(f'Message sent to {ip}:\n\"{msg}\"')
+                    except ConnectionRefusedError:
+                        debug_print(f'The server {ip} refused the connection on port {SERVER_SERVER_PORT}\n')
+                        out_queue.put('LOST~' + ip)
+
+                    # close connection to this particular server
+                    msg_socket.close()
+                snd_list.remove(lost_ip)
+                process_ips(snd_list)
 
             # otherwise the message is a database statement that all the other
             # replicas must run, so send it to all other replicas
 
             else:
                 # send the message to every other server in the DS
-                for ip in send_list:
+                for ip in snd_list:
                     try:
-                        msg_socket.connect((ip, SERVER_SERVER_PORT)) 
+                        msg_socket.connect((ip, SERVER_SERVER_PORT))
                         msg_socket.send(msg.encode())
                         debug_print(f'Message sent to {ip}:\n\"{msg}\"')
                     except ConnectionRefusedError:
                         debug_print(f'The server {ip} refused the connection on port {SERVER_SERVER_PORT}\n')
+                        out_queue.put('LOST~' + ip)
 
                     # close connection to this particular server
                     msg_socket.close()
@@ -367,6 +440,7 @@ def server_listener(in_queue: Queue, out_queue: Queue, acks: deque, \
                          out_queue, acks, can_wr, need_t)).start()
 #==============================================================================
 
+
 #==============================================================================
 def rcv_msg(conn, in_queue: Queue, out_queue: Queue, acks: deque, \
             can_wr: Event, need_t: Event):
@@ -386,6 +460,7 @@ def rcv_msg(conn, in_queue: Queue, out_queue: Queue, acks: deque, \
 
     return N/A
     '''
+    global snd_list
 
     # receive a message from another replica
     rcvd_msg = conn.recv(PACKET_SIZE).decode()
@@ -402,6 +477,15 @@ def rcv_msg(conn, in_queue: Queue, out_queue: Queue, acks: deque, \
 
     elif rcvd_msg == TOKEN_MSG and not need_t.is_set():
         out_queue.put(rcvd_msg)
+
+    elif 'LOST~' in rcvd_msg:
+        ip_msg = rcvd_msg.split('~')
+        snd_list.remove(ip_msg[1])
+        process_ips(snd_list)
+        # todo() # I need to remove the ip address from the send list
+
+    elif 'HEALTH~' in rcv_msg:
+        pass # Legit do nothing here
 
     # if the message is an ack, add this ack to the list of acks
 
@@ -432,6 +516,7 @@ def process_ips(ip_addrs: list):
                                     neighbour's ip and a list of all the other
                                     replicas in the DS
     '''
+    global neighbour
 
     # determine local IP
     # hostname = socket.gethostname()
@@ -465,9 +550,12 @@ def process_ips(ip_addrs: list):
 
 #==============================================================================
 def main():
+    global neighbour
+    global snd_list
 
     out_queue = Queue()     # out queue of messages to send to other replicas
     in_queue = Queue()      # in queue of messages received from other replicas
+
     can_write = threading.Event()  # thread even indicating if this repllica can
                                    # make changes to the databas
     need_token = threading.Event() # thread event inidcating if this replica
@@ -483,11 +571,12 @@ def main():
 
     (neighbour, snd_list) = process_ips(sys.argv[2:])
 
+
     # create connection pool for local MySQL database
     try:
-        spoofyDB_config = {"database": "SpoofyDB",
-                           "user":     "spoofyUser",
-                           "password": "testing",
+        spoofyDB_config = {"database": os.getenv('DB_Name'),
+                           "user":     os.getenv('DB_User'),
+                           "password": os.getenv('DB_Pass'),
                            "host":     LOCALHOST}
         db_pool = mysql.connector.pooling.MySQLConnectionPool(pool_name="pool", \
                                                               **spoofyDB_config)
@@ -503,7 +592,7 @@ def main():
 
     # start the thread to send messages to the other servers
     threading.Thread(target=snd_msgs, args=(out_queue, snd_list, \
-                     neighbour, sys.argv[1])).start()
+                     sys.argv[1])).start()
     debug_print('Send thread started')
 
     # start the thread to receive messages from other servers
@@ -514,6 +603,10 @@ def main():
     threading.Thread(target=run_remote_cmds, args=(in_queue, out_queue, \
                      db_pool)).start()
     debug_print('Receive thread started')
+#==============================================================================
+def todo():
+    raise NotImplementedError("This code is not yet implemented")
+
 #==============================================================================
 
 if __name__ == "__main__":
