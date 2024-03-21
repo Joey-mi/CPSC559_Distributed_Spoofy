@@ -55,6 +55,12 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
 		// If there are no errors, insert into the database
 		if(empty($error_string)) {
 
+			// Replace single quotes with escape characters
+			$name = str_replace("'", "\'", $name);
+			$about = str_replace("'", "\'", $about);
+			$pfp = str_replace("'", "\'", $pfp);
+			$bp = str_replace("'", "\'", $bp);
+
 			$sql = "UPDATE ARTIST SET Name='$name', About='$about', ProfilePicture='$pfp', BannerPicture='$bp' WHERE ArtistID=$ArtistID";
 			sendQuery($sql);
 			// $sql = "UPDATE ARTIST SET Name=?, About=?, ProfilePicture=?, BannerPicture=? WHERE ArtistID=?";

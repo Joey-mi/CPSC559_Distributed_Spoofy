@@ -38,6 +38,11 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
 
         // If there are no errors, insert into the database
         if(empty($error_string)) {
+
+            // Replace single quotes with escape characters
+			$company = str_replace("'", "\'", $company);
+			$soundfile = str_replace("'", "\'", $soundfile);
+
             // Prepare an insert statement
             $sql = "INSERT INTO ADVERTISEMENT (duration, company, soundfile) VALUES ($duration, '$company', '$soundfile')";
             sendQuery($sql);

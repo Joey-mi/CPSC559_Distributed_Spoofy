@@ -70,6 +70,12 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
 
 		// If there are no errors, insert into the database
 		if(empty($error_string)) {
+
+			// Replace single quotes with escape characters
+			$title = str_replace("'", "\'", $title);
+			$cover = str_replace("'", "\'", $cover);
+			$release = str_replace("'", "\'", $release);
+			$genre = str_replace("'", "\'", $genre);
 			
 			// Prepare an insert statement
 			$sql = "UPDATE ALBUM SET Title='$title', IsSingle=$single, CoverArt='$cover', ReleaseDate='$release', Genre='$genre' WHERE AlbumID=$AlbumID";

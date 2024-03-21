@@ -1,7 +1,10 @@
 <?php
 require_once("python_connect.php");
 function create_playlist($con, $playlist_name, $userID) {
-    $sql = "INSERT INTO PLAYLIST (PlaylistName, CreatorID) VALUES ($playlist_name, $userID)";
+    // Replace single quotes with escape characters
+	$playlist_name = str_replace("'", "\'", $playlist_name);
+
+    $sql = "INSERT INTO PLAYLIST (PlaylistName, CreatorID) VALUES ('$playlist_name', $userID)";
     sendQuery($sql);
     // $prepare = mysqli_prepare($con, "INSERT INTO PLAYLIST (PlaylistName, CreatorID) VALUES (?, ?)");
     // $prepare -> bind_param("ss", $playlist_name, $userID);
@@ -12,6 +15,21 @@ function create_playlist($con, $playlist_name, $userID) {
 function delete_playlist($con, $playlistID) {
     $sql = "DELETE FROM PLAYLIST WHERE PlaylistID=$playlistID";
     sendQuery($sql);
+
+    // // Get current URL
+    // if(isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on')   
+    //     $url = "https://";   
+    // else  
+    //     $url = "http://";   
+    // // Append the host(domain name, ip) to the URL.   
+    // $url.= $_SERVER['HTTP_HOST'];   
+
+    // // Append the requested resource location to the URL   
+    // $url.= $_SERVER['REQUEST_URI'];
+
+    // echo $url;
+
+    // header("Refresh:0; url=" + $url); 
     // $prepare = mysqli_prepare($con, "DELETE FROM PLAYLIST WHERE PlaylistID=?");
     // $prepare -> bind_param("s", $playlistID);
     // $prepare -> execute();

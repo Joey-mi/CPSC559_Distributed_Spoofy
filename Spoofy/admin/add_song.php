@@ -35,6 +35,11 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
 
 		// If there are no errors, insert into the database
 		if(empty($error_string)) {
+
+			// Replace single quotes with escape characters
+			$title = str_replace("'", "\'", $title);
+			$duration = str_replace("'", "\'", $duration);
+			$filepath = str_replace("'", "\'", $filepath);
 			
 			// Prepare an insert statement
 			$sql = "INSERT INTO SONG (Title, Duration, MusicFile, TotalPlays, MonthlyPlays) VALUES ('$title', $duration, '$filepath', 0, 0)";

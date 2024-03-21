@@ -38,6 +38,12 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
 
 		// If there are no errors, insert into the database
 		if(empty($error_string)) {
+
+			// Replace single quotes with escape characters
+			$name = str_replace("'", "\'", $name);
+			$about = str_replace("'", "\'", $about);
+			$pfp = str_replace("'", "\'", $pfp);
+			$bp = str_replace("'", "\'", $bp);
 			
 			// Prepare an insert statement
 			$sql = "INSERT INTO ARTIST (Name, About, ProfilePicture, BannerPicture, TotalPlays, MonthlyPlays) VALUES ('$name', '$about', '$pfp', '$bp', 0, 0)";
