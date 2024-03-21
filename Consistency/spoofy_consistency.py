@@ -2,6 +2,7 @@ import os
 import time
 import socket, multiprocessing, sys, threading, mysql.connector
 import netifaces
+from pathlib import Path
 from dotenv import load_dotenv
 from threading import Thread, Lock, Event
 from queue import Queue
@@ -16,6 +17,8 @@ TOKEN_MSG = 'Token~WR'      # token message inidicating local writes can be done
 
 neighour = ""
 snd_list = []
+
+dotenv_path = Path('../.env')
 #==============================================================================
 def debug_print(msg: str):
     '''
@@ -521,6 +524,7 @@ def process_ips(ip_addrs: list):
     # determine local IP
     # hostname = socket.gethostname()
     # ip = socket.gethostbyname(hostname + '.local')
+
     if os.getenv('MACHINE') == 'MacOs':
         ip = netifaces.ifaddresses('en0')[netifaces.AF_INET][0]['addr']
         print(f"Local IP addr is: {ip}")
@@ -552,6 +556,8 @@ def process_ips(ip_addrs: list):
 def main():
     global neighbour
     global snd_list
+
+    load_dotenv(dotenv_path=dotenv_path)
 
     out_queue = Queue()     # out queue of messages to send to other replicas
     in_queue = Queue()      # in queue of messages received from other replicas
@@ -591,7 +597,7 @@ def main():
     debug_print('Command receiver started')
 
     # start the thread to send messages to the other servers
-    threading.Thread(target=snd_msgs, args=(out_queue, snd_list, \
+    threading.Thread(target=snd_msgs, args=(out_queue, \
                      sys.argv[1])).start()
     debug_print('Send thread started')
 
