@@ -271,6 +271,9 @@ def snd_msgs(out_queue : Queue, init: str):
                     except ConnectionRefusedError:
                         debug_print(f'The server {ip} refused the connection on port {SERVER_SERVER_PORT}\n')
                         out_queue.put('LOST~' + ip)
+                    except TimeoutError:
+                        debug_print(f'Connection timeout on server {ip} with port {SERVER_SERVER_PORT}\n')
+                        out_queue.put('LOST~' + ip)
 
                     # close connection to this particular server
                     msg_socket.close()
@@ -285,6 +288,9 @@ def snd_msgs(out_queue : Queue, init: str):
                         debug_print(f'Message sent to {ip}:\n\"{msg}\"')
                     except ConnectionRefusedError:
                         debug_print(f'The server {ip} refused the connection on port {SERVER_SERVER_PORT}\n')
+                        out_queue.put('LOST~' + ip)
+                    except TimeoutError:
+                        debug_print(f'Connection timeout on server {ip} with port {SERVER_SERVER_PORT}\n')
                         out_queue.put('LOST~' + ip)
 
                     # close connection to this particular server
@@ -304,6 +310,9 @@ def snd_msgs(out_queue : Queue, init: str):
                         debug_print(f'Message sent to {ip}:\n\"{msg}\"')
                     except ConnectionRefusedError:
                         debug_print(f'The server {ip} refused the connection on port {SERVER_SERVER_PORT}\n')
+                        out_queue.put('LOST~' + ip)
+                    except TimeoutError:
+                        debug_print(f'Connection timeout on server {ip} with port {SERVER_SERVER_PORT}\n')
                         out_queue.put('LOST~' + ip)
 
                     # close connection to this particular server
