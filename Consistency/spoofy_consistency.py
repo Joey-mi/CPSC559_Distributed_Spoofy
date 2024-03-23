@@ -531,7 +531,7 @@ def rcv_msg(conn, in_queue: Queue, out_queue: Queue, acks: deque, \
             process_ips(snd_list) # HRMM
         # todo() # I need to remove the ip address from the send list
 
-    elif 'HEALTH~' in rcv_msg:
+    elif 'HEALTH~' in rcvd_msg:
         pass # Legit do nothing here
 
     # if the message is an ack, add this ack to the list of acks
