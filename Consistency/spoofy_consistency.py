@@ -296,23 +296,38 @@ def snd_msgs(out_queue : Queue, init: str):
             # if the message is the token pass it on to this replica's neighbour
 
             elif TOKEN_MSG in msg:
-                try:
-                    msg_socket.connect((neighbour, SERVER_SERVER_PORT)) 
-                    msg_socket.sendall(msg.encode())
-                except Exception as e:
-                    msg_socket.close()
-                    # unable to pass the token
-                    notify_lost_neighbour = 'LOST~' + neighbour
+                # check_passing = msg.split('~')
+                if msg == TOKEN_MSG:
+                    try:
+                        msg_socket.connect((neighbour, SERVER_SERVER_PORT)) 
+                        msg_socket.sendall(msg.encode())
+                    except Exception as e:
+                        msg_socket.close()
+                        # unable to pass the token
+                        notify_lost_neighbour = 'LOST~' + neighbour
 
-                    # send_list.remove(neighbour)
-                    # (neighbour, _) = process_ips(send_list)
+                        # send_list.remove(neighbour)
+                        # (neighbour, _) = process_ips(send_list)
 
-                    # Here I want to notify everyone else in the send_list to remove
-                    # msg_socket.connect((neighbour, SERVER_SERVER_PORT))
-                    # msg_socket.send(notify_lost_neighbour.encode())
+                        # Here I want to notify everyone else in the send_list to remove
+                        # msg_socket.connect((neighbour, SERVER_SERVER_PORT))
+                        # msg_socket.send(notify_lost_neighbour.encode())
 
-                    # msg_socket.send(msg.encode())
-                    out_queue.put(notify_lost_neighbour)
+                        # msg_socket.send(msg.encode())
+                        out_queue.put(notify_lost_neighbour)
+                else: 
+                    check_passing = msg.split('~')
+                    new_leader = check_passing[3]
+                    # NOT DONEEEEEE
+                    try:
+                        msg_socket.connect((neighbour, SERVER_SERVER_PORT)) 
+                        msg_socket.sendall(msg.encode())
+                    except Exception as e:
+                        msg_socket.close()
+                        # unable to pass the token
+                        notify_lost_neighbour = 'LOST~' + neighbour
+
+                    
 
                 debug_print(f'Token forwarded to \'{neighbour}\'')
                 msg_socket.close()
@@ -356,6 +371,24 @@ def snd_msgs(out_queue : Queue, init: str):
                     snd_list.remove(lost_ip[1]) # HRMMMM
                     process_ips(snd_list) # HRMMM
 
+            elif "New_Leader" in msg:
+                for ip in snd_list:
+                    try:
+                        msg_socket.connect((ip, SERVER_SERVER_PORT))
+                        msg_socket.send(msg.encode())
+                        debug_print(f'Message sent to {ip}:\n\"{msg}\"')
+                    except ConnectionRefusedError:
+                        debug_print(f'The server {ip} refused the connection on port {SERVER_SERVER_PORT}\n')
+                        out_queue.put('LOST~' + ip + 'NEW')
+                    except TimeoutError:
+                        debug_print(f'Connection timeout on server {ip} with port {SERVER_SERVER_PORT}\n')
+                        out_queue.put('LOST~' + ip + 'NEW')
+
+                    # close connection to this particular server
+                    msg_socket.close()
+                if lost_ip[1] in snd_list:
+                    snd_list.remove(lost_ip[1]) # HRMMMM
+                    process_ips(snd_list) # HRMMM
             # otherwise the message is a database statement that all the other
             # replicas must run, so send it to all other replicas
 
@@ -510,16 +543,20 @@ def server_listener(in_queue: Queue, out_queue: Queue, acks: deque, \
 
     # start listening for other servers
     server_listener.bind((ip, SERVER_SERVER_PORT))
+    server_socket.settimeout(10)
     server_listener.listen(5)
 
     # keep accepting connections from other servers and processing the
     # messages received from them
     while True:
-        (server_socket, addr) = server_listener.accept()
-        debug_print(f'Received connection from {addr}:')
+        try:
+            (server_socket, addr) = server_listener.accept()
+            debug_print(f'Received connection from {addr}:')
 
-        threading.Thread(target=rcv_msg, args=(server_socket, in_queue, \
-                         out_queue, acks, can_wr, need_t)).start()
+            threading.Thread(target=rcv_msg, args=(server_socket, in_queue, \
+                            out_queue, acks, can_wr, need_t)).start()
+        except socket.timeout:
+            out_queue.put("New_Leader")
 #==============================================================================
 
 
@@ -566,6 +603,8 @@ def rcv_msg(conn, in_queue: Queue, out_queue: Queue, acks: deque, \
         if ip_msg[1] in snd_list:
             snd_list.remove(ip_msg[1]) # HRMMM
             process_ips(snd_list) # HRMM
+        if ip_msg[2] == 'NEW':
+            out_queue.put(TOKEN_MSG + snd_list[0])
         # todo() # I need to remove the ip address from the send list
         # acks.append('HEALTH~ACK')
         # pass # Legit do nothing here
