@@ -190,7 +190,7 @@ def acks_rcvd(acks: deque, mysql_stmnt: str, num_acks: int, ip: str, health_chec
             if ack_msg[0] == 'ACK' and ack_msg[1] == 'HEALTH':
                 health_acks_rcvd += 1
             elif ack_msg[0] == 'ACK' and ack_msg[1] == ip and  \
-           ack_msg[2] == mysql_stmnt:
+               ack_msg[2] == mysql_stmnt:
                 acks_rcvd += 1
         elif ack_msg[0] == 'ACK' and ack_msg[1] == 'HEALTH':
             acks_rcvd += 1
@@ -352,8 +352,8 @@ def snd_msgs(out_queue : Queue, init: str):
 
                     # close connection to this particular server
                     msg_socket.close()
-                if lost_ip in snd_list:
-                    snd_list.remove(lost_ip) # HRMMMM
+                if lost_ip[1] in snd_list:
+                    snd_list.remove(lost_ip[1]) # HRMMMM
                     process_ips(snd_list) # HRMMM
 
             # otherwise the message is a database statement that all the other
