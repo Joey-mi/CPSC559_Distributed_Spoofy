@@ -238,6 +238,8 @@ def snd_msgs(out_queue : Queue, init: str):
         
     return N/A
     '''
+    global need_t
+    global can_wr
     global neighbour
     global snd_list
 
@@ -361,9 +363,13 @@ def snd_msgs(out_queue : Queue, init: str):
                     # close connection to this particular server
                     msg_socket.close()
                 if lost_ip[1] in snd_list:
-                    writey
+                    old_neighbour = neighbour
+                    can_wr.clear()
                     snd_list.remove(lost_ip[1]) # HRMMMM
                     (neighbour, snd_list) = process_ips(snd_list) # HRMMM
+
+                    if old_neighbour == lost_ip[1]:
+                        out_queue.put(TOKEN_MSG)
 
             # otherwise the message is a database statement that all the other
             # replicas must run, so send it to all other replicas
@@ -577,9 +583,18 @@ def rcv_msg(conn, in_queue: Queue, out_queue: Queue, acks: deque):
 
     elif 'LOST~' in rcvd_msg:
         ip_msg = rcvd_msg.split('~')
+        # if ip_msg[1] in snd_list:
+        #     snd_list.remove(ip_msg[1]) # HRMMM
+        #     (neighbour, snd_list) = process_ips(snd_list) # HRMM
+
         if ip_msg[1] in snd_list:
-            snd_list.remove(ip_msg[1]) # HRMMM
-            (neighbour, snd_list) = process_ips(snd_list) # HRMM
+            old_neighbour = neighbour
+            can_wr.clear()
+            snd_list.remove(ip_msg[1]) # HRMMMM
+            (neighbour, snd_list) = process_ips(snd_list) # HRMMM
+            
+            if old_neighbour == ip_msg[1]:
+                out_queue.put(TOKEN_MSG)
         # todo() # I need to remove the ip address from the send list
         # acks.append('HEALTH~ACK')
         # pass # Legit do nothing here
