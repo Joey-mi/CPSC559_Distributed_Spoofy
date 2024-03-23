@@ -602,15 +602,15 @@ def rcv_msg(conn, in_queue: Queue, out_queue: Queue, acks: deque, \
     if rcvd_msg in TOKEN_MSG:
         check_new_leader = rcvd_msg.split('~')
         # checks with snd_list length here
-        new_leader_wait(leader_assign_count)
+        if leader_assign_count == len(snd_list) - 1:
 
-        #Just hold here 
-        if check_new_leader[2] in snd_list:
-            # New function like ack
-            if need_t.is_set():
-                can_wr.set()
-            else:
-                out_queue.put(TOKEN_MSG)
+            #Just hold here 
+            if check_new_leader[2] in snd_list:
+                # New function like ack
+                if need_t.is_set():
+                    can_wr.set()
+                else:
+                    out_queue.put(TOKEN_MSG)
 
     elif 'LOST~' in rcvd_msg:
         ip_msg = rcvd_msg.split('~')
@@ -638,79 +638,6 @@ def rcv_msg(conn, in_queue: Queue, out_queue: Queue, acks: deque, \
     conn.close()
 #==============================================================================
 
-def new_leader_wait():
-    '''
-    Keeps running until acks for a database change have been received from
-    all other servers in the system.
-
-    param acks: list of acks received from other servers
-    param mysql_stmnt: the MySQL statement run on all servers
-    param num_acks: the number of acks expected based on the number of 
-                    other replicas in the system
-    param ip: the ip address of this replica
-
-    returns boolean: true if expected number of acks received, false otherwise
-    '''
-
-    acks_rcvd = 0 # number of acks received for a particular action
-    health_acks_rcvd = 0
-    debug_print(f'Checking if acks received for \'{ip}\'')
-
-    # while the number of acks received doesn't equal the expected number of
-    # acks, wait
-
-    restart_timer = time.time()
-    timeout = 3
-
-    if health_check:
-        while len(acks) != (num_acks * 2):
-            wait = 0
-            if restart_timer + timeout > time.time():
-                break
-    else:
-        while len(acks) != num_acks:
-            wait = 0
-            if restart_timer + timeout > time.time():
-                break
-            
-    debug_print(f'length of acks: {len(acks)} \t Number of acks: {num_acks}')
-    debug_print(f'Currently in acks: {acks}')
-    debug_print(f'Am I in health check? {health_check}')
-    # When the expected number of acks are received check them all and see if
-    # they are acks, that they are meant to reply to this replica and that
-    # the action they performed matches the expected action. If so increment
-    # the number of acks received.
-
-    for ack in acks:
-        ack_msg = ack.split('~')
-        if health_check:
-            if ack_msg[0] == 'ACK' and ack_msg[1] == 'HEALTH':
-                health_acks_rcvd += 1
-            elif ack_msg[0] == 'ACK' and ack_msg[1] == ip and  \
-               ack_msg[2] == mysql_stmnt:
-                acks_rcvd += 1
-        elif ack_msg[0] == 'ACK' and ack_msg[1] == 'HEALTH':
-            acks_rcvd += 1
-        elif ack_msg[0] == 'ACK' and ack_msg[1] == ip and  \
-           ack_msg[2] == mysql_stmnt:
-            acks_rcvd += 1
-
-    # if the expected number of acks are received return True, else False
-    if acks_rcvd == num_acks and not health_check:
-        debug_print("Enter ack 1")
-        # empty the acks list
-        acks.clear()
-        return True
-    elif acks_rcvd == num_acks and health_acks_rcvd == num_acks and health_check:
-        debug_print("Enter ack 2")
-        # empty the acks list
-        acks.clear()
-        return True
-    else :
-        debug_print("Enter ack 3")
-        return False
-
-    return acks_rcvd
 
 #==============================================================================
 def process_ips(ip_addrs: list):
