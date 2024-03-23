@@ -280,6 +280,8 @@ def snd_msgs(out_queue : Queue, init: str):
                 # close connection to this particular server
                 msg_socket.close()
 
+            start_time = time.time()
+
         # while there are messages in the out queue do the following
         while not out_queue.empty():
 
