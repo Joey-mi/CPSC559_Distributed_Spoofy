@@ -112,7 +112,7 @@ def run_cmd(php_listener: socket, out_queue: Queue, pool, acks: deque, \
     health_ack_check = False
     health_check = False
 
-    while not ack_check:
+    while not (ack_check or health_ack_check):
         ### NEW ###
         ack_check = acks_rcvd(acks, mysql_stmnt, len(snd_list), local_ip, health_check)
         # wait for ack from all other replicas that the write was performed
