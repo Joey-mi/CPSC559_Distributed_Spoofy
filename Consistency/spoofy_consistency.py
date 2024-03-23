@@ -263,6 +263,7 @@ def snd_msgs(out_queue : Queue, init: str):
             if 'ACK~HEALTH' == msg:
                 # send the message to every other server in the DS
                 for ip in snd_list:
+                    msg_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     try:
                         msg_socket.connect((ip, SERVER_SERVER_PORT))
                         msg_socket.sendall(msg.encode())
@@ -322,6 +323,7 @@ def snd_msgs(out_queue : Queue, init: str):
                 # send the message to every other server in the DS
                 for ip in snd_list:
                     try:
+                        msg_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                         msg_socket.connect((ip, SERVER_SERVER_PORT))
                         msg_socket.sendall(msg.encode())
                         debug_print(f'Health Check sent to {ip}:\n\"{msg}\"')
@@ -340,6 +342,7 @@ def snd_msgs(out_queue : Queue, init: str):
                 lost_ip = msg.split('~')
                 for ip in snd_list:
                     try:
+                        msg_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                         msg_socket.connect((ip, SERVER_SERVER_PORT))
                         msg_socket.send(msg.encode())
                         debug_print(f'Message sent to {ip}:\n\"{msg}\"')
@@ -363,6 +366,7 @@ def snd_msgs(out_queue : Queue, init: str):
                 # send the message to every other server in the DS
                 for ip in snd_list:
                     try:
+                        msg_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                         msg_socket.connect((ip, SERVER_SERVER_PORT))
                         msg_socket.send(msg.encode())
                         debug_print(f'Message sent to {ip}:\n\"{msg}\"')
