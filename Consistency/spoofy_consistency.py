@@ -189,6 +189,9 @@ def acks_rcvd(acks: deque, mysql_stmnt: str, num_acks: int, ip: str, health_chec
         if health_check:
             if ack_msg[0] == 'ACK' and ack_msg[1] == 'HEALTH':
                 health_acks_rcvd += 1
+            elif ack_msg[0] == 'ACK' and ack_msg[1] == ip and  \
+           ack_msg[2] == mysql_stmnt:
+                acks_rcvd += 1
         elif ack_msg[0] == 'ACK' and ack_msg[1] == 'HEALTH':
             acks_rcvd += 1
         elif ack_msg[0] == 'ACK' and ack_msg[1] == ip and  \
