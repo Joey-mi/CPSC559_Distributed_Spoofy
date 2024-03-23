@@ -317,7 +317,7 @@ def snd_msgs(out_queue : Queue, init: str):
                         out_queue.put(notify_lost_neighbour)
                 else: 
                     check_passing = msg.split('~')
-                    new_leader = check_passing[3]
+                    new_leader = check_passing[2]
                     # NOT DONEEEEEE
                     try:
                         msg_socket.connect((new_leader, SERVER_SERVER_PORT)) 
@@ -594,21 +594,19 @@ def rcv_msg(conn, in_queue: Queue, out_queue: Queue, acks: deque, \
 
     # if the message is the token and this replica doesn't need to make changes
     # to the database add it to the out queue to be passed along
+    if rcvd_msg in TOKEN_MSG: # UHOH
+        can_wr.set()
 
     elif rcvd_msg == TOKEN_MSG and not need_t.is_set():
         out_queue.put(rcvd_msg)
-
-    elif rcvd_msg in TOKEN_MSG:
-        
-        can_wr.set()
 
     elif 'LOST~' in rcvd_msg:
         ip_msg = rcvd_msg.split('~')
         if ip_msg[1] in snd_list:
             snd_list.remove(ip_msg[1]) # HRMMM
             process_ips(snd_list) # HRMM
-        if ip_msg[2] == 'NEW':
-            out_queue.put(TOKEN_MSG + snd_list[0])
+            if ip_msg[2] == 'NEW':
+                out_queue.put(TOKEN_MSG + "~" + snd_list[0])
         # todo() # I need to remove the ip address from the send list
         # acks.append('HEALTH~ACK')
         # pass # Legit do nothing here
