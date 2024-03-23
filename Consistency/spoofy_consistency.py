@@ -254,8 +254,31 @@ def snd_msgs(out_queue : Queue, init: str):
         debug_print(f'Token forwarded to \'{neighbour}\'')
         msg_socket.close()
 
+    # Start the timer
+    start_time = time.time()
+    time_up = 10
     # continue running this as long as the program runs
     while True:
+
+        if (time.time() > start_time + time_up):
+            msg = "TIMEUP"
+            # send the message to every other server in the DS
+            for ip in snd_list:
+
+                try:
+                    msg_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    msg_socket.connect((ip, SERVER_SERVER_PORT))
+                    msg_socket.sendall(msg.encode())
+                    debug_print(f'Timer Check sent to {ip}:\n\"{msg}\"')
+                except ConnectionRefusedError:
+                    debug_print(f'The server {ip} refused the connection on port {SERVER_SERVER_PORT}\n')
+                    out_queue.put('LOST~' + ip)
+                except TimeoutError:
+                    debug_print(f'Connection timeout on server {ip} with port {SERVER_SERVER_PORT}\n')
+                    out_queue.put('LOST~' + ip)
+
+                # close connection to this particular server
+                msg_socket.close()
 
         # while there are messages in the out queue do the following
         while not out_queue.empty():
@@ -597,7 +620,8 @@ def rcv_msg(conn, in_queue: Queue, out_queue: Queue, acks: deque):
         # todo() # I need to remove the ip address from the send list
         # acks.append('HEALTH~ACK')
         # pass # Legit do nothing here
-
+    elif 'TIMEUP' in rcvd_msg:
+        pass
     # if the message is an ack, add this ack to the list of acks
 
     elif 'ACK~' in rcvd_msg:
