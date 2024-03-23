@@ -34,7 +34,7 @@ def debug_print(msg: str):
 
 #==============================================================================
 def run_cmd(php_listener: socket, out_queue: Queue, pool, acks: deque, \
-            num_acks: int, can_wr: Event, need_t: Event):
+            can_wr: Event, need_t: Event):
 
     '''
     This method receives MySql statements from the Spoofy website, executes 
@@ -109,10 +109,12 @@ def run_cmd(php_listener: socket, out_queue: Queue, pool, acks: deque, \
     spoofyDB.close()
 
     ack_check = False
+    health_ack_check = False
+    health_check = False
 
     while not ack_check:
         ### NEW ###
-        ack_check = acks_rcvd(acks, mysql_stmnt, len(snd_list), local_ip)
+        ack_check = acks_rcvd(acks, mysql_stmnt, len(snd_list), local_ip, health_check)
         # wait for ack from all other replicas that the write was performed
         # while not acks_rcvd(acks, mysql_stmnt, num_acks, local_ip):
         #     wait = 0
@@ -121,6 +123,10 @@ def run_cmd(php_listener: socket, out_queue: Queue, pool, acks: deque, \
             # deque([])
             # health_check(acks, mysql_stmnt, num_acks, local_ip)
             out_queue.put('HEALTH~')
+            while not health_ack_check:
+                health_check = True
+                health_ack_check = acks_rcvd(acks, mysql_stmnt, len(snd_list), local_ip, health_check)
+            health_check = False
 
 
     # add token to out queue and inidicate that no writing needs to be done
@@ -134,7 +140,7 @@ def run_cmd(php_listener: socket, out_queue: Queue, pool, acks: deque, \
 #==============================================================================
 
 #==============================================================================
-def acks_rcvd(acks: deque, mysql_stmnt: str, num_acks: int, ip: str):
+def acks_rcvd(acks: deque, mysql_stmnt: str, num_acks: int, ip: str, health_check: bool):
     '''
     Keeps running until acks for a database change have been received from
     all other servers in the system.
@@ -149,6 +155,7 @@ def acks_rcvd(acks: deque, mysql_stmnt: str, num_acks: int, ip: str):
     '''
 
     acks_rcvd = 0 # number of acks received for a particular action
+    health_acks_rcvd = 0
     debug_print(f'Checking if acks received for \'{ip}\'')
 
     # while the number of acks received doesn't equal the expected number of
@@ -157,10 +164,16 @@ def acks_rcvd(acks: deque, mysql_stmnt: str, num_acks: int, ip: str):
     restart_timer = time.time()
     timeout = 3
 
-    while len(acks) != num_acks:
-        wait = 0
-        if restart_timer + timeout > time.time():
-            break
+    if health_check:
+        while (len(acks) * 2) != (num_acks * 2):
+            wait = 0
+            if restart_timer + timeout > time.time():
+                break
+    else:
+        while len(acks) != num_acks:
+            wait = 0
+            if restart_timer + timeout > time.time():
+                break
             
 
     # When the expected number of acks are received check them all and see if
@@ -170,15 +183,24 @@ def acks_rcvd(acks: deque, mysql_stmnt: str, num_acks: int, ip: str):
 
     for ack in acks:
         ack_msg = ack.split('~')
-        if ack_msg[0] == 'ACK' and ack_msg[1] == ip and  \
+        if health_check:
+            if ack_msg[0] == 'ACK' and ack_msg[1] == 'HEALTH':
+                health_acks_rcvd += 1
+        elif ack_msg[0] == 'ACK' and ack_msg[1] == 'HEALTH':
+            acks_rcvd += 1
+        elif ack_msg[0] == 'ACK' and ack_msg[1] == ip and  \
            ack_msg[2] == mysql_stmnt:
             acks_rcvd += 1
 
-    # empty the acks list
-    acks.clear()
 
     # if the expected number of acks are received return True, else False
-    if acks_rcvd == num_acks:
+    if acks_rcvd == num_acks and not health_check:
+        # empty the acks list
+        acks.clear()
+        return True
+    elif acks_rcvd == num_acks and health_acks_rcvd == num_acks and health_check:
+        # empty the acks list
+        acks.clear()
         return True
     else :
         return False
@@ -295,8 +317,8 @@ def snd_msgs(out_queue : Queue, init: str):
 
                     # close connection to this particular server
                     msg_socket.close()
-                snd_list.remove(lost_ip)
-                process_ips(snd_list)
+                snd_list.remove(lost_ip) # HRMMMM
+                process_ips(snd_list) # HRMMM
 
             # otherwise the message is a database statement that all the other
             # replicas must run, so send it to all other replicas
@@ -351,7 +373,7 @@ def php_listener(out_queue: Queue, pool, acks: deque, num_acks: int, \
     while True:
         # keep listening for new messages from the Spoofy website and when 
         # received process the message
-        (php_socket, addr) = php_listener.accept()
+        (php_socket, _) = php_listener.accept()
         debug_print(f'Received command from Spoofy')
 
         # run the command received from Spoofy
@@ -374,7 +396,7 @@ def run_remote_cmds(in_queue: Queue, out_queue: Queue, pool):
 
     return N/A
     '''
-
+    health_or_lost = False
     # while the in queue contains items do the following
     while True:
         while not in_queue.empty():
@@ -394,13 +416,24 @@ def run_remote_cmds(in_queue: Queue, out_queue: Queue, pool):
                 cursor.execute(data_item[2])
                 db.commit()
                 debug_print("Database update complete\n")
-            except:
+            except IndexError:
+                if data_item[0] == "HEALTH":
+                    ack = 'ACK~HEALTH'
+                else:
+                    ack = 'ACK~' + data_item[1] + '~LOST'
+
+                health_or_lost = True
+            except Exception as e:
                 debug_print("There was an error updating the database\n")
                 db.rollback()
 
+            if not health_or_lost:
             # format ack message and add it to out queue
-            ack = 'ACK~' + data_item[1] + '~' + data_item[2]
+                ack = 'ACK~' + data_item[1] + '~' + data_item[2]  
+              
             out_queue.put(ack)
+
+            health_or_lost = False
 
             # close the connection to the database
             cursor.close()
@@ -492,8 +525,8 @@ def rcv_msg(conn, in_queue: Queue, out_queue: Queue, acks: deque, \
 
     elif 'LOST~' in rcvd_msg:
         ip_msg = rcvd_msg.split('~')
-        snd_list.remove(ip_msg[1])
-        process_ips(snd_list)
+        snd_list.remove(ip_msg[1]) # HRMMM
+        process_ips(snd_list) # HRMM
         # todo() # I need to remove the ip address from the send list
 
     elif 'HEALTH~' in rcv_msg:
