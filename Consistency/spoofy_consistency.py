@@ -192,7 +192,6 @@ def acks_rcvd(acks: deque, mysql_stmnt: str, num_acks: int, ip: str, health_chec
            ack_msg[2] == mysql_stmnt:
             acks_rcvd += 1
 
-
     # if the expected number of acks are received return True, else False
     if acks_rcvd == num_acks and not health_check:
         # empty the acks list
@@ -412,21 +411,21 @@ def run_remote_cmds(in_queue: Queue, out_queue: Queue, pool):
             db = pool.get_connection()
             cursor = db.cursor()
 
-            # execute the command in the message on the database
-            try:
-                cursor.execute(data_item[2])
-                db.commit()
-                debug_print("Database update complete\n")
-            except IndexError:
-                if data_item[0] == "HEALTH":
-                    ack = 'ACK~HEALTH'
-                else:
-                    ack = 'ACK~' + data_item[1] + '~LOST'
-
+            if data_item[0] == "HEALTH":
+                ack = 'ACK~HEALTH'
                 health_or_lost = True
-            except Exception as e:
-                debug_print("There was an error updating the database\n")
-                db.rollback()
+            elif data_item[2] == "LOST":
+                ack = 'ACK~' + data_item[1] + '~LOST'
+                health_or_lost = True
+            else:
+                # execute the command in the message on the database
+                try:
+                    cursor.execute(data_item[2])
+                    db.commit()
+                    debug_print("Database update complete\n")
+                except:
+                    debug_print("There was an error updating the database\n")
+                    db.rollback()
 
             if not health_or_lost:
             # format ack message and add it to out queue
@@ -510,7 +509,8 @@ def rcv_msg(conn, in_queue: Queue, out_queue: Queue, acks: deque, \
 
     # receive a message from another replica
     rcvd_msg = conn.recv(PACKET_SIZE).decode()
-    debug_print(f'Message received is:\n\"{rcvd_msg}\"')
+    if rcvd_msg != TOKEN_MSG:
+        debug_print(f'Message received is:\n\"{rcvd_msg}\"')
 
     # if the message is the token and this replica wants to make changes to the
     # database then set this replica's ability to do so to True
@@ -532,7 +532,8 @@ def rcv_msg(conn, in_queue: Queue, out_queue: Queue, acks: deque, \
         # todo() # I need to remove the ip address from the send list
 
     elif 'HEALTH~' in rcvd_msg:
-        pass # Legit do nothing here
+        acks.append('HEALTH~ACK')
+        # pass # Legit do nothing here
 
     # if the message is an ack, add this ack to the list of acks
 
