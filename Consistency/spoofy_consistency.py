@@ -379,7 +379,7 @@ def php_listener(out_queue: Queue, pool, acks: deque, num_acks: int, \
 
         # run the command received from Spoofy
         threading.Thread(target=run_cmd, \
-                         args=(php_socket, out_queue, pool, acks, num_acks, \
+                         args=(php_socket, out_queue, pool, acks, \
                          can_wr, need_t)).start()
 
 #==============================================================================
