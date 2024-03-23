@@ -616,6 +616,9 @@ def process_ips(ip_addrs: list):
         hostname = socket.gethostname()
         ip = socket.gethostbyname(hostname + ".local") 
 
+    if ip not in ip_addrs:
+        ip_addrs.append(ip)
+
     # sort the list of replica IPs in ascending order
     sorted_ips = sorted(ip_addrs)
 
