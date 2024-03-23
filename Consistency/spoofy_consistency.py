@@ -256,7 +256,24 @@ def snd_msgs(out_queue : Queue, init: str):
             # if the message is an ack send it back to the replica that sent 
             # the database change
 
-            if 'ACK~' in msg:
+            if 'ACK~HEALTH' == msg:
+                # send the message to every other server in the DS
+                for ip in snd_list:
+                    try:
+                        msg_socket.connect((ip, SERVER_SERVER_PORT))
+                        msg_socket.sendall(msg.encode())
+                        debug_print(f'Health Check sent to {ip}:\n\"{msg}\"')
+                    except ConnectionRefusedError:
+                        debug_print(f'The server {ip} refused the connection on port {SERVER_SERVER_PORT}\n')
+                        out_queue.put('LOST~' + ip)
+                    except TimeoutError:
+                        debug_print(f'Connection timeout on server {ip} with port {SERVER_SERVER_PORT}\n')
+                        out_queue.put('LOST~' + ip)
+
+                    # close connection to this particular server
+                    msg_socket.close()
+
+            elif 'ACK~' in msg:
                 contents = msg.split('~')
                 # msg_socket.connect((contents[1], SERVER_SERVER_PORT))
                 # msg_socket.send(msg.encode())
@@ -428,7 +445,7 @@ def run_remote_cmds(in_queue: Queue, out_queue: Queue, pool):
 
             if data_item[0] == "HEALTH":
                 debug_print("Am going to add this ACK")
-                ack = 'ACK~' + data_item[1] + "~HEALTH"
+                ack = 'ACK~' + "HEALTH"
                 health_or_lost = True
             elif data_item[2] == "LOST":
                 ack = 'ACK~' + data_item[1] + '~LOST'
