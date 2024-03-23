@@ -357,7 +357,7 @@ def snd_msgs(out_queue : Queue, init: str):
                     msg_socket.close()
                 if lost_ip[1] in snd_list:
                     snd_list.remove(lost_ip[1]) # HRMMMM
-                    process_ips(snd_list) # HRMMM
+                    (snd_list, _) = process_ips(snd_list) # HRMMM
 
             # otherwise the message is a database statement that all the other
             # replicas must run, so send it to all other replicas
@@ -569,7 +569,7 @@ def rcv_msg(conn, in_queue: Queue, out_queue: Queue, acks: deque, \
         ip_msg = rcvd_msg.split('~')
         if ip_msg[1] in snd_list:
             snd_list.remove(ip_msg[1]) # HRMMM
-            process_ips(snd_list) # HRMM
+            (snd_list, _) = process_ips(snd_list) # HRMM
         # todo() # I need to remove the ip address from the send list
         # acks.append('HEALTH~ACK')
         # pass # Legit do nothing here
