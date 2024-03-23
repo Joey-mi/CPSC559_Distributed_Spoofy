@@ -15,6 +15,10 @@ SERVER_SERVER_PORT = 10000  # port to send and receive messages between servers
 PACKET_SIZE = 4096          # default size of packets to send and receive
 TOKEN_MSG = 'Token~WR'      # token message inidicating local writes can be done
 
+can_wr = threading.Event()  # thread even indicating if this repllica can
+                                   # make changes to the databas
+need_t = threading.Event() # thread event inidcating if this replica
+                                   # wants to make changes to the database
 neighour = ""
 snd_list = deque([])
 
@@ -33,8 +37,7 @@ def debug_print(msg: str):
 #==============================================================================
 
 #==============================================================================
-def run_cmd(php_listener: socket, out_queue: Queue, pool, acks: deque, \
-            can_wr: Event, need_t: Event):
+def run_cmd(php_listener: socket, out_queue: Queue, pool, acks: deque):
 
     '''
     This method receives MySql statements from the Spoofy website, executes 
@@ -55,6 +58,8 @@ def run_cmd(php_listener: socket, out_queue: Queue, pool, acks: deque, \
 
     return N/A
     '''
+    global need_t
+    global can_wr
     global snd_list
 
     data = b''        # data containing MySQL query received from website
@@ -356,6 +361,7 @@ def snd_msgs(out_queue : Queue, init: str):
                     # close connection to this particular server
                     msg_socket.close()
                 if lost_ip[1] in snd_list:
+                    writey
                     snd_list.remove(lost_ip[1]) # HRMMMM
                     (neighbour, snd_list) = process_ips(snd_list) # HRMMM
 
@@ -384,8 +390,7 @@ def snd_msgs(out_queue : Queue, init: str):
 #==============================================================================
 
 #==============================================================================
-def php_listener(out_queue: Queue, pool, acks: deque, num_acks: int, \
-                 can_wr: Event, need_t: Event):
+def php_listener(out_queue: Queue, pool, acks: deque, num_acks: int):
 
     '''
     Sets up a socket connection to listen for messages from Spoofy website
@@ -402,6 +407,8 @@ def php_listener(out_queue: Queue, pool, acks: deque, num_acks: int, \
 
     return N/A
     '''
+    global need_t
+    global can_wr
 
     # create the socket and extract the hostname & ip information from it
     php_listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -482,8 +489,7 @@ def run_remote_cmds(in_queue: Queue, out_queue: Queue, pool):
 #==============================================================================
 
 #==============================================================================
-def server_listener(in_queue: Queue, out_queue: Queue, acks: deque, \
-                    can_wr: Event, need_t: Event):
+def server_listener(in_queue: Queue, out_queue: Queue, acks: deque):
 
     '''
     This method listens for messages from other replica servers.
@@ -498,6 +504,8 @@ def server_listener(in_queue: Queue, out_queue: Queue, acks: deque, \
 
     return N/A
     '''
+    global need_t
+    global can_wr
 
     # create a socket to listen for messages from other servers
     server_listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -528,8 +536,7 @@ def server_listener(in_queue: Queue, out_queue: Queue, acks: deque, \
 
 
 #==============================================================================
-def rcv_msg(conn, in_queue: Queue, out_queue: Queue, acks: deque, \
-            can_wr: Event, need_t: Event):
+def rcv_msg(conn, in_queue: Queue, out_queue: Queue, acks: deque):
 
     '''
     This method will receive messages from other replica servers and add those
@@ -546,6 +553,8 @@ def rcv_msg(conn, in_queue: Queue, out_queue: Queue, acks: deque, \
 
     return N/A
     '''
+    global need_t
+    global can_wr
     global neighbour
     global snd_list
 
@@ -650,10 +659,6 @@ def main():
     out_queue = Queue()     # out queue of messages to send to other replicas
     in_queue = Queue()      # in queue of messages received from other replicas
 
-    can_write = threading.Event()  # thread even indicating if this repllica can
-                                   # make changes to the databas
-    need_token = threading.Event() # thread event inidcating if this replica
-                                   # wants to make changes to the database
     acks = deque([]) # contains acks that a write 
                                                # operation was performed
                                                # across all other replicas
@@ -681,7 +686,7 @@ def main():
 
     # start the thread to receive MySQL commands from the database
     threading.Thread(target=php_listener, args=(out_queue, db_pool, acks, \
-                     len(snd_list), can_write, need_token)).start()
+                     len(snd_list))).start()
     debug_print('Command receiver started')
 
     # start the thread to send messages to the other servers
@@ -691,7 +696,7 @@ def main():
 
     # start the thread to receive messages from other servers
     threading.Thread(target=server_listener, args=(in_queue, out_queue, \
-                     acks, can_write, need_token)).start()
+                     acks)).start()
 
     # start the thread to run commands received from other servers
     threading.Thread(target=run_remote_cmds, args=(in_queue, out_queue, \
