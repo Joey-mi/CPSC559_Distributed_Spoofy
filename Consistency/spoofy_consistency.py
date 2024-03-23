@@ -256,10 +256,20 @@ def snd_msgs(out_queue : Queue, init: str):
             # if the message is an ack send it back to the replica that sent 
             # the database change
 
-            if 'ACK~' in msg and ('HEALTH' not in msg):
+            if 'ACK~' in msg:
                 contents = msg.split('~')
-                msg_socket.connect((contents[1], SERVER_SERVER_PORT))
-                msg_socket.send(msg.encode())
+                # msg_socket.connect((contents[1], SERVER_SERVER_PORT))
+                # msg_socket.send(msg.encode())
+                # msg_socket.close()
+                try:
+                    msg_socket.connect((contents[1], SERVER_SERVER_PORT))
+                    msg_socket.sendall(msg.encode())
+                except ConnectionRefusedError:
+                    debug_print(f'The server {contents[1]} refused the connection on port {SERVER_SERVER_PORT}\n')
+                    out_queue.put('LOST~' + contents[1])
+                except TimeoutError:
+                    debug_print(f'Connection timeout on server {contents[1]} with port {SERVER_SERVER_PORT}\n')
+                    out_queue.put('LOST~' + contents[1])
                 msg_socket.close()
 
             # if the message is the token pass it on to this replica's neighbour
