@@ -431,8 +431,7 @@ def php_listener(out_queue: Queue, pool, acks: deque, num_acks: int):
 
         # run the command received from Spoofy
         threading.Thread(target=run_cmd, \
-                         args=(php_socket, out_queue, pool, acks, \
-                         can_wr, need_t)).start()
+                         args=(php_socket, out_queue, pool, acks)).start()
 
 #==============================================================================
 def run_remote_cmds(in_queue: Queue, out_queue: Queue, pool):
@@ -537,7 +536,7 @@ def server_listener(in_queue: Queue, out_queue: Queue, acks: deque):
         debug_print(f'Received connection from {addr}:')
 
         threading.Thread(target=rcv_msg, args=(server_socket, in_queue, \
-                         out_queue, acks, can_wr, need_t)).start()
+                         out_queue, acks)).start()
 #==============================================================================
 
 
