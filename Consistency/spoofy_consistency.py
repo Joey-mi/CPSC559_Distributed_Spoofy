@@ -252,7 +252,7 @@ def snd_msgs(out_queue : Queue, init: str):
             # if the message is an ack send it back to the replica that sent 
             # the database change
 
-            if 'ACK~' in msg and not ('HEALTH~' in msg):
+            if 'ACK~' in msg and ('HEALTH' not in msg):
                 contents = msg.split('~')
                 msg_socket.connect((contents[1], SERVER_SERVER_PORT))
                 msg_socket.send(msg.encode())
