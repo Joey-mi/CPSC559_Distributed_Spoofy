@@ -594,8 +594,13 @@ def rcv_msg(conn, in_queue: Queue, out_queue: Queue, acks: deque, \
 
     # if the message is the token and this replica doesn't need to make changes
     # to the database add it to the out queue to be passed along
-    if rcvd_msg in TOKEN_MSG: # UHOH
-        can_wr.set()
+    if rcvd_msg in TOKEN_MSG:
+        # checks with snd_list length here
+        #Just hold here 
+        if need_t.is_set():
+            can_wr.set()
+        else:
+            out_queue.put(TOKEN_MSG)
 
     elif rcvd_msg == TOKEN_MSG and not need_t.is_set():
         out_queue.put(rcvd_msg)
