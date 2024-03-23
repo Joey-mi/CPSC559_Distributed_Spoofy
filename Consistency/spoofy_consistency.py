@@ -177,6 +177,7 @@ def acks_rcvd(acks: deque, mysql_stmnt: str, num_acks: int, ip: str, health_chec
                 break
             
     debug_print(f'length of acks: {len(acks)} \t Number of acks: {num_acks}')
+    debug_print(f'Currently in acks: {acks}')
     debug_print(f'Am I in health check? {health_check}')
     # When the expected number of acks are received check them all and see if
     # they are acks, that they are meant to reply to this replica and that
