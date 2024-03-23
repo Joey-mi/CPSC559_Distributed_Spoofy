@@ -693,6 +693,9 @@ def main():
     threading.Thread(target=run_remote_cmds, args=(in_queue, out_queue, \
                      db_pool)).start()
     debug_print('Receive thread started')
+
+    while True:
+        continue
 #==============================================================================
 def todo():
     raise NotImplementedError("This code is not yet implemented")
