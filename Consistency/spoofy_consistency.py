@@ -16,7 +16,7 @@ PACKET_SIZE = 4096          # default size of packets to send and receive
 TOKEN_MSG = 'Token~WR'      # token message inidicating local writes can be done
 
 neighour = ""
-snd_list = []
+snd_list = deque([])
 
 dotenv_path = Path('../.env')
 #==============================================================================
