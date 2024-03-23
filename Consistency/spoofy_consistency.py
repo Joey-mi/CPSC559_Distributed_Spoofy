@@ -320,12 +320,12 @@ def snd_msgs(out_queue : Queue, init: str):
                     new_leader = check_passing[3]
                     # NOT DONEEEEEE
                     try:
-                        msg_socket.connect((neighbour, SERVER_SERVER_PORT)) 
+                        msg_socket.connect((new_leader, SERVER_SERVER_PORT)) 
                         msg_socket.sendall(msg.encode())
                     except Exception as e:
                         msg_socket.close()
                         # unable to pass the token
-                        notify_lost_neighbour = 'LOST~' + neighbour
+                        notify_lost_neighbour = 'LOST~' + new_leader
 
                     
 
@@ -597,6 +597,10 @@ def rcv_msg(conn, in_queue: Queue, out_queue: Queue, acks: deque, \
 
     elif rcvd_msg == TOKEN_MSG and not need_t.is_set():
         out_queue.put(rcvd_msg)
+
+    elif rcvd_msg in TOKEN_MSG:
+        
+        can_wr.set()
 
     elif 'LOST~' in rcvd_msg:
         ip_msg = rcvd_msg.split('~')
