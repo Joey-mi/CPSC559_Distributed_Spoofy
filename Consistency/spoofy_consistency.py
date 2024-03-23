@@ -120,6 +120,7 @@ def run_cmd(php_listener: socket, out_queue: Queue, pool, acks: deque, \
         #     wait = 0
 
         if not ack_check:
+            debug_print("I'm stuck in the ack_check loop")
             # deque([])
             # health_check(acks, mysql_stmnt, num_acks, local_ip)
             out_queue.put('HEALTH~')
@@ -412,6 +413,7 @@ def run_remote_cmds(in_queue: Queue, out_queue: Queue, pool):
             cursor = db.cursor()
 
             if data_item[0] == "HEALTH":
+                debug_print("Am going to add this ACK")
                 ack = 'ACK~HEALTH'
                 health_or_lost = True
             elif data_item[2] == "LOST":
@@ -530,9 +532,7 @@ def rcv_msg(conn, in_queue: Queue, out_queue: Queue, acks: deque, \
             snd_list.remove(ip_msg[1]) # HRMMM
             process_ips(snd_list) # HRMM
         # todo() # I need to remove the ip address from the send list
-
-    elif 'HEALTH~' in rcvd_msg:
-        acks.append('HEALTH~ACK')
+        # acks.append('HEALTH~ACK')
         # pass # Legit do nothing here
 
     # if the message is an ack, add this ack to the list of acks
