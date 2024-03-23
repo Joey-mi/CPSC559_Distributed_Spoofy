@@ -643,7 +643,7 @@ def main():
                                    # make changes to the databas
     need_token = threading.Event() # thread event inidcating if this replica
                                    # wants to make changes to the database
-    acks = deque([], maxlen=len(sys.argv[3:])) # contains acks that a write 
+    acks = deque([]) # contains acks that a write 
                                                # operation was performed
                                                # across all other replicas
 
