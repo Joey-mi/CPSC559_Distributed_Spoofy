@@ -176,7 +176,8 @@ def acks_rcvd(acks: deque, mysql_stmnt: str, num_acks: int, ip: str, health_chec
             if restart_timer + timeout > time.time():
                 break
             
-
+    debug_print(f'length of acks: {len(acks)} \t Number of acks: {num_acks}')
+    debug_print(f'Am I in health check? {health_check}')
     # When the expected number of acks are received check them all and see if
     # they are acks, that they are meant to reply to this replica and that
     # the action they performed matches the expected action. If so increment
@@ -195,14 +196,17 @@ def acks_rcvd(acks: deque, mysql_stmnt: str, num_acks: int, ip: str, health_chec
 
     # if the expected number of acks are received return True, else False
     if acks_rcvd == num_acks and not health_check:
+        debug_print("Enter ack 1")
         # empty the acks list
         acks.clear()
         return True
     elif acks_rcvd == num_acks and health_acks_rcvd == num_acks and health_check:
+        debug_print("Enter ack 2")
         # empty the acks list
         acks.clear()
         return True
     else :
+        debug_print("Enter ack 3")
         return False
 
     return acks_rcvd
