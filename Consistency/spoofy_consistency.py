@@ -281,6 +281,7 @@ def snd_msgs(out_queue : Queue, init: str):
                 msg_socket.close()
 
             start_time = time.time()
+            debug_print(f'Time reset to: {start_time}')
 
         # while there are messages in the out queue do the following
         while not out_queue.empty():
