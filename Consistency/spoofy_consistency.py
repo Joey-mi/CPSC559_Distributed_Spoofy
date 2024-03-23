@@ -428,7 +428,7 @@ def run_remote_cmds(in_queue: Queue, out_queue: Queue, pool):
 
             if data_item[0] == "HEALTH":
                 debug_print("Am going to add this ACK")
-                ack = 'ACK~HEALTH'
+                ack = 'ACK~' + data_item[1] + "~HEALTH"
                 health_or_lost = True
             elif data_item[2] == "LOST":
                 ack = 'ACK~' + data_item[1] + '~LOST'
