@@ -166,7 +166,7 @@ def acks_rcvd(acks: deque, mysql_stmnt: str, num_acks: int, ip: str, health_chec
     timeout = 3
 
     if health_check:
-        while (len(acks) * 2) != (num_acks * 2):
+        while len(acks) != (num_acks * 2):
             wait = 0
             if restart_timer + timeout > time.time():
                 break
