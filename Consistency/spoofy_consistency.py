@@ -262,28 +262,8 @@ def snd_msgs(out_queue : Queue, init: str):
     while True:
 
         if (time.time() > start_time + time_up):
-            msg = "TIMEUP"
-            # send the message to every other server in the DS
-            for ip in snd_list:
-
-                try:
-                    msg_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    msg_socket.connect((ip, SERVER_SERVER_PORT))
-                    msg_socket.sendall(msg.encode())
-                    debug_print(f'Timer Check sent to {ip}:\n\"{msg}\"')
-                except ConnectionRefusedError:
-                    debug_print(f'The server {ip} refused the connection on port {SERVER_SERVER_PORT}\n')
-                    out_queue.put('LOST~' + ip)
-                except TimeoutError:
-                    debug_print(f'Connection timeout on server {ip} with port {SERVER_SERVER_PORT}\n')
-                    out_queue.put('LOST~' + ip)
-
-                # close connection to this particular server
-                msg_socket.close()
-
-            start_time = time.time()
-            debug_print(f'Time reset to: {start_time}')
-
+            out_queue.put("TIMEUP")
+           
         # while there are messages in the out queue do the following
         while not out_queue.empty():
 
@@ -388,6 +368,27 @@ def snd_msgs(out_queue : Queue, init: str):
 
                     if old_neighbour == lost_ip[1]:
                         out_queue.put(TOKEN_MSG)
+            elif "TIMEUP" == msg:
+                # send the message to every other server in the DS
+                for ip in snd_list:
+
+                    try:
+                        msg_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                        msg_socket.connect((ip, SERVER_SERVER_PORT))
+                        msg_socket.sendall(msg.encode())
+                        debug_print(f'Timer Check sent to {ip}:\n\"{msg}\"')
+                    except ConnectionRefusedError:
+                        debug_print(f'The server {ip} refused the connection on port {SERVER_SERVER_PORT}\n')
+                        out_queue.put('LOST~' + ip)
+                    except TimeoutError:
+                        debug_print(f'Connection timeout on server {ip} with port {SERVER_SERVER_PORT}\n')
+                        out_queue.put('LOST~' + ip)
+
+                    # close connection to this particular server
+                    msg_socket.close()
+
+                start_time = time.time()
+                debug_print(f'Time reset to: {start_time}')
 
             # otherwise the message is a database statement that all the other
             # replicas must run, so send it to all other replicas
@@ -411,7 +412,7 @@ def snd_msgs(out_queue : Queue, init: str):
                     msg_socket.close()
 
             debug_print('Message sent\n')
-            start_time = time.time()
+            # start_time = time.time()
 #==============================================================================
 
 #==============================================================================
