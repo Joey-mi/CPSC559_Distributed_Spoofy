@@ -338,15 +338,6 @@ def snd_msgs(out_queue : Queue, init: str):
                     msg_socket.close()
                     # unable to pass the token
                     notify_lost_neighbour = 'LOST~' + neighbour
-
-                    # send_list.remove(neighbour)
-                    # (neighbour, _) = process_ips(send_list)
-
-                    # Here I want to notify everyone else in the send_list to remove
-                    # msg_socket.connect((neighbour, SERVER_SERVER_PORT))
-                    # msg_socket.send(notify_lost_neighbour.encode())
-
-                    # msg_socket.send(msg.encode())
                     out_queue.put(notify_lost_neighbour)
 
                 debug_print(f'Token forwarded to \'{neighbour}\'')
@@ -495,9 +486,9 @@ def run_remote_cmds(in_queue: Queue, out_queue: Queue, pool):
                 debug_print("Am going to add this ACK")
                 ack = 'ACK~' + "HEALTH"
                 health_or_lost = True
-            elif data_item[0] == "LOST":
-                ack = 'ACK~' + data_item[1] + '~LOST'
-                health_or_lost = True
+            # elif data_item[0] == "LOST":
+            #     ack = 'ACK~' + data_item[1] + '~LOST'
+            #     health_or_lost = True
             else:
                 # execute the command in the message on the database
                 try:
@@ -610,9 +601,6 @@ def rcv_msg(conn, in_queue: Queue, out_queue: Queue, acks: deque):
 
     elif 'LOST~' in rcvd_msg:
         ip_msg = rcvd_msg.split('~')
-        # if ip_msg[1] in snd_list:
-        #     snd_list.remove(ip_msg[1]) # HRMMM
-        #     (neighbour, snd_list) = process_ips(snd_list) # HRMM
 
         if ip_msg[1] in snd_list:
             old_neighbour = neighbour
@@ -622,9 +610,7 @@ def rcv_msg(conn, in_queue: Queue, out_queue: Queue, acks: deque):
             
             if old_neighbour == ip_msg[1]:
                 out_queue.put(TOKEN_MSG)
-        # todo() # I need to remove the ip address from the send list
-        # acks.append('HEALTH~ACK')
-        # pass # Legit do nothing here
+
     elif 'TIMEUP' in rcvd_msg:
         pass
     # if the message is an ack, add this ack to the list of acks
