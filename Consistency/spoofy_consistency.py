@@ -210,7 +210,7 @@ def acks_rcvd(acks: deque, mysql_stmnt: str, num_acks: int, ip: str, health_chec
         # empty the acks list
         acks.clear()
         return True
-    elif acks_rcvd == num_acks and health_acks_rcvd == num_acks and health_check:
+    elif acks_rcvd == num_acks and health_acks_rcvd >= num_acks and health_check:
         debug_print("Enter ack 2")
         # empty the acks list
         acks.clear()
@@ -456,7 +456,7 @@ def php_listener(out_queue: Queue, pool, acks: deque, num_acks: int):
         # received process the message
         (php_socket, _) = php_listener.accept()
         debug_print(f'Received command from Spoofy')
-
+        acks.clear()
         # run the command received from Spoofy
         threading.Thread(target=run_cmd, \
                          args=(php_socket, out_queue, pool, acks)).start()
