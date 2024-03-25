@@ -581,7 +581,7 @@ def server_listener(in_queue: Queue, out_queue: Queue, acks: deque, \
     server_listener.bind((LOCAL_IP, SERVER_SERVER_PORT))
     server_listener.listen(5)
 
-    server_socket.settimeout(10)
+    server_listener.settimeout(10)
 
     # keep accepting connections from other servers and processing the
     # messages received from them
