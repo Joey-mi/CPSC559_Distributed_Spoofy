@@ -45,7 +45,6 @@ NUM_ACKS = 0                   # number of acks to expect from the other replica
 LOCAL_IP=''                    # local IP address of this replica
 DOTENV_PATH = Path('../.env')  # path to .eve file
 
-
 #==============================================================================
 def debug_print(msg: str):
     '''
@@ -57,6 +56,116 @@ def debug_print(msg: str):
     '''
     if(DEBUG):
         print(msg)
+#==============================================================================
+
+#==============================================================================
+def process_ips(ip_addrs: list, to_remove: str, can_wr: Event):
+
+    '''
+    Creates a list of other replica IP addresses that messages must be sent to.
+    Also determines who this replica's successor is, so that the token can be
+    passed directly to that successor.
+
+    param ip_addrs: list of replica IP addresses present in the DS
+    param to_remove: the IP address to remove from the send list
+    param can_wr: thread Event inidcating if this replica can make changes to
+                  the database
+
+    returns N/A
+    '''
+
+    global SUCCESSOR
+    global PREDECESSOR
+    global SND_LIST
+    global NUM_ACKS
+
+    # add the local ip to the provided list if it's not already there
+    if LOCAL_IP not in ip_addrs:
+        ip_addrs.append(LOCAL_IP)
+
+    # if a crashed replica's IP was provided remove it from the list
+    if to_remove != '' and to_remove in ip_addrs:
+        ip_addrs.remove(to_remove)
+        debug_print(f'\'{to_remove}\' removed from SND_LIST')
+
+    # sort the list of replica IPs in ascending order
+    sorted_ips = sorted(ip_addrs)
+
+    # determine where this replica's IP is in the list of IPs
+    own_index = sorted_ips.index(LOCAL_IP)
+
+    # Determine this replica's successor's IP address to send the token to.
+    # SUCCESSOR is a global string, may need some massaging here to make 
+    # it fully thread safe.
+    if own_index == (len(sorted_ips) - 1):
+        SUCCESSOR = sorted_ips[0]
+    else:
+        SUCCESSOR = sorted_ips[own_index + 1]
+
+    # Determine this replica's predecessor's IP address. PREDECESSOR is a global
+    # string, may need some massaging here to make it fully thread safe.
+    if own_index == 0:
+        PREDECESSOR = sorted_ips[-1]
+    else:
+        PREDECESSOR = sorted_ips[own_index - 1]
+
+    # remove this replica's IP from the list, no need to send messages to itself
+    sorted_ips.remove(LOCAL_IP)
+
+    # Convert the sorted and formatted list to a deque. This is a global deque,
+    # may need some massaging to make it fully thread safe here.
+    SND_LIST = deque(sorted_ips)
+
+    # Calculate the number of acks this replica should expect back. This is a 
+    # global value, may need some massaging to make it fully thread safe here.
+    NUM_ACKS = len(SND_LIST)
+
+    # If this replica is the last one running in the DS set it so that it can
+    # always make changes to the database
+    if len(SND_LIST) == 0:
+        can_wr.set()
+
+    debug_print(f'Token predecessor is \'{PREDECESSOR}\'')
+    debug_print(f'Token successor is \'{SUCCESSOR}\'')
+    debug_print(f'List of other replicas is {SND_LIST}')
+#==============================================================================
+
+#==============================================================================
+def php_listener(out_queue: Queue, pool, acks: deque, can_wr: Event, \
+                 need_t: Event):
+
+    '''
+    Sets up a socket connection to listen for messages from Spoofy website
+
+    param out_queue: queue to store received messages in so they can be sent to 
+                     other servers
+    param pool: collection pool of connections to the MySQL database
+    param acks: list of acks received from other replicas
+    param can_wr: thread Event inidicating if this replica can make changes to
+                  the database
+    param need_t: thread Even inidicating if this replica wants to make changes
+                  to the database
+
+    return N/A
+    '''
+
+    # create the socket and extract the hostname & ip information from it
+    php_listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    # start the socket
+    php_listener.bind((LOCALHOST, PHP_PORT))
+    php_listener.listen(5)
+
+    while True:
+        # keep listening for new messages from the Spoofy website and when 
+        # received process the message
+        (php_socket, addr) = php_listener.accept()
+        debug_print(f'Received command from Spoofy')
+
+        # run the command received from Spoofy
+        threading.Thread(target=run_cmd, \
+                         args=(php_socket, out_queue, pool, acks, can_wr, \
+                         need_t), daemon=True).start()
 #==============================================================================
 
 #==============================================================================
@@ -173,27 +282,6 @@ def run_cmd(php_listener: socket, out_queue: Queue, pool, acks: deque, \
 #==============================================================================
 
 #==============================================================================
-def ack_ips_to_list(acks: deque):
-    '''
-    Takes the deque of all the acks received and converts it into a list of
-    just the IPs the acks were received from.
-
-    param acks: all the acks received for a write operation
-
-    return ack_ips: a list of the IPs acks were recieved from for a write 
-                    operation
-    '''
-
-    ack_ips = []
-
-    for ack in acks:
-       ack_msg = ack.split('~')   
-       ack_ips.append(ack_msg[2])  
-
-    return ack_ips
-#==============================================================================
-
-#==============================================================================
 def acks_rcvd(out_queue: Queue, acks: deque, mysql_stmnt: str, can_wr: Event):
     '''
     Keeps running until acks for a write operation have been received from
@@ -252,6 +340,27 @@ def acks_rcvd(out_queue: Queue, acks: deque, mysql_stmnt: str, can_wr: Event):
 #==============================================================================
 
 #==============================================================================
+def ack_ips_to_list(acks: deque):
+    '''
+    Takes the deque of all the acks received and converts it into a list of
+    just the IPs the acks were received from.
+
+    param acks: all the acks received for a write operation
+
+    return ack_ips: a list of the IPs acks were recieved from for a write 
+                    operation
+    '''
+
+    ack_ips = []
+
+    for ack in acks:
+       ack_msg = ack.split('~')   
+       ack_ips.append(ack_msg[2])  
+
+    return ack_ips
+#==============================================================================
+
+#==============================================================================
 def rcv_checks():
     '''
     Listens for connection attempts from other replicas. This is to make sure
@@ -276,36 +385,6 @@ def rcv_checks():
     while True:
         (check_socket, addr) = check_listener.accept()
         debug_print(f'Received check from from {addr}:')
-#==============================================================================
-
-#==============================================================================
-def detect_crashes():
-    '''
-    If this replica times out waiting for a token it will run this function
-    to determine which of the replicas in the DS have crashed.
-
-    param N/A
-
-    returns crashed_replicas: list of IPs belonging to replicas that have
-                              have crashed
-    '''
-
-    crashed_replicas = [] # list of replicas that have crashed
-
-    # for every ip address in the current list of replica ips do the following
-    for ip in SND_LIST:
-
-        # Attempt to connect to the replica. If the connection is successful
-        # then just continue, otherwise if an error is thrown note the ip
-        # address that caused the connection to fail.
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as check_socket:
-            try:
-                check_socket.connect((ip, CHECK_PORT))
-            except (ConnectionRefusedError, ConnectionResetError, socket.gaierror):
-                crashed_replicas.append(ip)
-
-    return crashed_replicas
-
 #==============================================================================
 
 #==============================================================================
@@ -440,92 +519,33 @@ def snd_msgs(out_queue: Queue, init: str, can_wr: Event):
 #==============================================================================
 
 #==============================================================================
-def php_listener(out_queue: Queue, pool, acks: deque, can_wr: Event, \
-                 need_t: Event):
-
+def detect_crashes():
     '''
-    Sets up a socket connection to listen for messages from Spoofy website
+    If this replica times out waiting for a token it will run this function
+    to determine which of the replicas in the DS have crashed.
 
-    param out_queue: queue to store received messages in so they can be sent to 
-                     other servers
-    param pool: collection pool of connections to the MySQL database
-    param acks: list of acks received from other replicas
-    param can_wr: thread Event inidicating if this replica can make changes to
-                  the database
-    param need_t: thread Even inidicating if this replica wants to make changes
-                  to the database
+    param N/A
 
-    return N/A
+    returns crashed_replicas: list of IPs belonging to replicas that have
+                              have crashed
     '''
 
-    # create the socket and extract the hostname & ip information from it
-    php_listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    crashed_replicas = [] # list of replicas that have crashed
 
-    # start the socket
-    php_listener.bind((LOCALHOST, PHP_PORT))
-    php_listener.listen(5)
+    # for every ip address in the current list of replica ips do the following
+    for ip in SND_LIST:
 
-    while True:
-        # keep listening for new messages from the Spoofy website and when 
-        # received process the message
-        (php_socket, addr) = php_listener.accept()
-        debug_print(f'Received command from Spoofy')
+        # Attempt to connect to the replica. If the connection is successful
+        # then just continue, otherwise if an error is thrown note the ip
+        # address that caused the connection to fail.
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as check_socket:
+            try:
+                check_socket.connect((ip, CHECK_PORT))
+            except (ConnectionRefusedError, ConnectionResetError, socket.gaierror):
+                crashed_replicas.append(ip)
 
-        # run the command received from Spoofy
-        threading.Thread(target=run_cmd, \
-                         args=(php_socket, out_queue, pool, acks, can_wr, \
-                         need_t), daemon=True).start()
+    return crashed_replicas
 
-#==============================================================================
-def run_remote_cmds(in_queue: Queue, out_queue: Queue, pool):
-
-    '''
-    Checks for messages in the in queue. While it contains messages this method
-    will remove them from the queue and run them on the local MySQL database.
-    Once the command has been run on the database an ack will be created and
-    put in the out queue.
-
-    param in_queue: queue of messages received from other servers
-    param out_queue: queue of messages to send out to other replicas
-    param pool: pool of connections to MySQL server
-
-    return N/A
-    '''
-
-    # while the in queue contains items do the following
-    while True:
-
-        while not in_queue.empty():
-
-            # retrieve the oldest message in the in queue and split it apart
-            # so you can grab the actual MySQL statement
-            data_item = in_queue.get().split('~')
-
-            # Sometimes when a replica crashes the others can receive an
-            # empty write operatino. If this happens just ignore it.
-            if data_item[0] != '':
-                debug_print(f'Commands for writing are: {data_item}')
-
-                # create connection to local database
-                db = pool.get_connection()
-                cursor = db.cursor()
-
-                # execute the command in the message on the database
-                try:
-                    cursor.execute(data_item[2])
-                    db.commit()
-                    debug_print("Database update complete\n")
-                except:
-                    debug_print("There was an error updating the database\n")
-                    db.rollback()
-
-                # format ack message and add it to out queue
-                ack = 'ACK~' + data_item[1] + '~' + LOCAL_IP + '~' + data_item[2]
-                out_queue.put(ack)
-
-                # close the connection to the database
-                cursor.close()
-                db.close()
 #==============================================================================
 
 #==============================================================================
@@ -619,75 +639,55 @@ def rcv_msg(conn: socket, in_queue: Queue, out_queue: Queue, acks: deque, \
 #==============================================================================
 
 #==============================================================================
-def process_ips(ip_addrs: list, to_remove: str, can_wr: Event):
+def run_remote_cmds(in_queue: Queue, out_queue: Queue, pool):
 
     '''
-    Creates a list of other replica IP addresses that messages must be sent to.
-    Also determines who this replica's successor is, so that the token can be
-    passed directly to that successor.
+    Checks for messages in the in queue. While it contains messages this method
+    will remove them from the queue and run them on the local MySQL database.
+    Once the command has been run on the database an ack will be created and
+    put in the out queue.
 
-    param ip_addrs: list of replica IP addresses present in the DS
-    param to_remove: the IP address to remove from the send list
-    param can_wr: thread Event inidcating if this replica can make changes to
-                  the database
+    param in_queue: queue of messages received from other servers
+    param out_queue: queue of messages to send out to other replicas
+    param pool: pool of connections to MySQL server
 
-    returns N/A
+    return N/A
     '''
 
-    global SUCCESSOR
-    global PREDECESSOR
-    global SND_LIST
-    global NUM_ACKS
+    # while the in queue contains items do the following
+    while True:
 
-    # add the local ip to the provided list if it's not already there
-    if LOCAL_IP not in ip_addrs:
-        ip_addrs.append(LOCAL_IP)
+        while not in_queue.empty():
 
-    # if a crashed replica's IP was provided remove it from the list
-    if to_remove != '' and to_remove in ip_addrs:
-        ip_addrs.remove(to_remove)
-        debug_print(f'\'{to_remove}\' removed from SND_LIST')
+            # retrieve the oldest message in the in queue and split it apart
+            # so you can grab the actual MySQL statement
+            data_item = in_queue.get().split('~')
 
-    # sort the list of replica IPs in ascending order
-    sorted_ips = sorted(ip_addrs)
+            # Sometimes when a replica crashes the others can receive an
+            # empty write operatino. If this happens just ignore it.
+            if data_item[0] != '':
+                debug_print(f'Commands for writing are: {data_item}')
 
-    # determine where this replica's IP is in the list of IPs
-    own_index = sorted_ips.index(LOCAL_IP)
+                # create connection to local database
+                db = pool.get_connection()
+                cursor = db.cursor()
 
-    # Determine this replica's successor's IP address to send the token to.
-    # SUCCESSOR is a global string, may need some massaging here to make 
-    # it fully thread safe.
-    if own_index == (len(sorted_ips) - 1):
-        SUCCESSOR = sorted_ips[0]
-    else:
-        SUCCESSOR = sorted_ips[own_index + 1]
+                # execute the command in the message on the database
+                try:
+                    cursor.execute(data_item[2])
+                    db.commit()
+                    debug_print("Database update complete\n")
+                except:
+                    debug_print("There was an error updating the database\n")
+                    db.rollback()
 
-    # Determine this replica's predecessor's IP address. PREDECESSOR is a global
-    # string, may need some massaging here to make it fully thread safe.
-    if own_index == 0:
-        PREDECESSOR = sorted_ips[-1]
-    else:
-        PREDECESSOR = sorted_ips[own_index - 1]
+                # format ack message and add it to out queue
+                ack = 'ACK~' + data_item[1] + '~' + LOCAL_IP + '~' + data_item[2]
+                out_queue.put(ack)
 
-    # remove this replica's IP from the list, no need to send messages to itself
-    sorted_ips.remove(LOCAL_IP)
-
-    # Convert the sorted and formatted list to a deque. This is a global deque,
-    # may need some massaging to make it fully thread safe here.
-    SND_LIST = deque(sorted_ips)
-
-    # Calculate the number of acks this replica should expect back. This is a 
-    # global value, may need some massaging to make it fully thread safe here.
-    NUM_ACKS = len(SND_LIST)
-
-    # If this replica is the last one running in the DS set it so that it can
-    # always make changes to the database
-    if len(SND_LIST) == 0:
-        can_wr.set()
-
-    debug_print(f'Token predecessor is \'{PREDECESSOR}\'')
-    debug_print(f'Token successor is \'{SUCCESSOR}\'')
-    debug_print(f'List of other replicas is {SND_LIST}')
+                # close the connection to the database
+                cursor.close()
+                db.close()
 #==============================================================================
 
 #==============================================================================
