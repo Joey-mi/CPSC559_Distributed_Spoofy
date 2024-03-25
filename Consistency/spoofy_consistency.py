@@ -118,22 +118,24 @@ def run_cmd(php_listener: socket, out_queue: Queue, pool, acks: deque):
     health_check = False
 
     ## WE GOT STUCK HERE
-    while not (ack_check or health_ack_check):
+    # while not (ack_check or health_ack_check):
+    while not ack_check:
         ### NEW ###
         ack_check = acks_rcvd(acks, mysql_stmnt, len(snd_list), local_ip, health_check)
         # wait for ack from all other replicas that the write was performed
         # while not acks_rcvd(acks, mysql_stmnt, num_acks, local_ip):
         #     wait = 0
-
         if not ack_check:
-            debug_print("I'm stuck in the ack_check loop")
-            # deque([])
-            # health_check(acks, mysql_stmnt, num_acks, local_ip)
-            out_queue.put('HEALTH~')
-            while not health_ack_check:
-                health_check = True
-                health_ack_check = acks_rcvd(acks, mysql_stmnt, len(snd_list), local_ip, health_check)
-            health_check = False
+            out_queue.put('TIMEUP')
+        # if not ack_check:
+        #     debug_print("I'm stuck in the ack_check loop")
+        #     # deque([])
+        #     # health_check(acks, mysql_stmnt, num_acks, local_ip)
+        #     out_queue.put('HEALTH~')
+        #     while not health_ack_check:
+        #         health_check = True
+        #         health_ack_check = acks_rcvd(acks, mysql_stmnt, len(snd_list), local_ip, health_check)
+        #     health_check = False
 
 
     # add token to out queue and inidicate that no writing needs to be done
@@ -169,18 +171,23 @@ def acks_rcvd(acks: deque, mysql_stmnt: str, num_acks: int, ip: str, health_chec
     # acks, wait
 
     restart_timer = time.time()
-    timeout = 3
+    timeout = 10
 
-    if health_check:
-        while len(acks) != (num_acks * 2):
+    while len(acks) != (num_acks * 2):
             wait = 0
             if restart_timer + timeout > time.time():
                 break
-    else:
-        while len(acks) != num_acks:
-            wait = 0
-            if restart_timer + timeout > time.time():
-                break
+
+    # if health_check:
+    #     while len(acks) != (num_acks * 2):
+    #         wait = 0
+    #         if restart_timer + timeout > time.time():
+    #             break
+    # else:
+    #     while len(acks) != num_acks:
+    #         wait = 0
+    #         if restart_timer + timeout > time.time():
+    #             break
             
     debug_print(f'length of acks: {len(acks)} \t Number of acks: {num_acks}')
     debug_print(f'Currently in acks: {acks}')
@@ -192,32 +199,42 @@ def acks_rcvd(acks: deque, mysql_stmnt: str, num_acks: int, ip: str, health_chec
 
     for ack in acks:
         ack_msg = ack.split('~')
-        if health_check:
-            if ack_msg[0] == 'ACK' and ack_msg[1] == 'HEALTH':
-                health_acks_rcvd += 1
-            elif ack_msg[0] == 'ACK' and ack_msg[1] == ip and  \
-               ack_msg[2] == mysql_stmnt:
-                acks_rcvd += 1
-        elif ack_msg[0] == 'ACK' and ack_msg[1] == 'HEALTH':
-            acks_rcvd += 1
-        elif ack_msg[0] == 'ACK' and ack_msg[1] == ip and  \
+        if ack_msg[0] == 'ACK' and ack_msg[1] == ip and  \
            ack_msg[2] == mysql_stmnt:
             acks_rcvd += 1
+        # if health_check:
+        #     if ack_msg[0] == 'ACK' and ack_msg[1] == 'HEALTH':
+        #         health_acks_rcvd += 1
+        #     elif ack_msg[0] == 'ACK' and ack_msg[1] == ip and  \
+        #        ack_msg[2] == mysql_stmnt:
+        #         acks_rcvd += 1
+        # elif ack_msg[0] == 'ACK' and ack_msg[1] == 'HEALTH':
+        #     acks_rcvd += 1
+        # elif ack_msg[0] == 'ACK' and ack_msg[1] == ip and  \
+        #    ack_msg[2] == mysql_stmnt:
+        #     acks_rcvd += 1
 
-    # if the expected number of acks are received return True, else False
-    if acks_rcvd == num_acks and not health_check:
-        debug_print("Enter ack 1")
+    if acks_rcvd == num_acks:
+        debug_print("Successful Acks")
         # empty the acks list
         acks.clear()
         return True
-    elif acks_rcvd == num_acks and health_acks_rcvd >= num_acks and health_check:
-        debug_print("Enter ack 2")
-        # empty the acks list
-        acks.clear()
-        return True
-    else :
-        debug_print("Enter ack 3")
+    else:
         return False
+    # if the expected number of acks are received return True, else False
+    # if acks_rcvd == num_acks and not health_check:
+    #     debug_print("Enter ack 1")
+    #     # empty the acks list
+    #     acks.clear()
+    #     return True
+    # elif acks_rcvd == num_acks and health_acks_rcvd >= num_acks and health_check:
+    #     debug_print("Enter ack 2")
+    #     # empty the acks list
+    #     acks.clear()
+    #     return True
+    # else :
+    #     debug_print("Enter ack 3")
+    #     return False
 
     return acks_rcvd
 #==============================================================================
@@ -274,25 +291,25 @@ def snd_msgs(out_queue : Queue, init: str):
             # if the message is an ack send it back to the replica that sent 
             # the database change
 
-            if 'ACK~HEALTH' == msg:
-                # send the message to every other server in the DS
-                for ip in snd_list:
-                    msg_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    try:
-                        msg_socket.connect((ip, SERVER_SERVER_PORT))
-                        msg_socket.sendall(msg.encode())
-                        debug_print(f'Health Check sent to {ip}:\n\"{msg}\"')
-                    except ConnectionRefusedError:
-                        debug_print(f'The server {ip} refused the connection on port {SERVER_SERVER_PORT}\n')
-                        out_queue.put('LOST~' + ip)
-                    except TimeoutError:
-                        debug_print(f'Connection timeout on server {ip} with port {SERVER_SERVER_PORT}\n')
-                        out_queue.put('LOST~' + ip)
+            # if 'ACK~HEALTH' == msg:
+            #     # send the message to every other server in the DS
+            #     for ip in snd_list:
+            #         msg_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            #         try:
+            #             msg_socket.connect((ip, SERVER_SERVER_PORT))
+            #             msg_socket.sendall(msg.encode())
+            #             debug_print(f'Health Check sent to {ip}:\n\"{msg}\"')
+            #         except ConnectionRefusedError:
+            #             debug_print(f'The server {ip} refused the connection on port {SERVER_SERVER_PORT}\n')
+            #             out_queue.put('LOST~' + ip)
+            #         except TimeoutError:
+            #             debug_print(f'Connection timeout on server {ip} with port {SERVER_SERVER_PORT}\n')
+            #             out_queue.put('LOST~' + ip)
 
-                    # close connection to this particular server
-                    msg_socket.close()
+            #         # close connection to this particular server
+            #         msg_socket.close()
 
-            elif 'ACK~' in msg:
+            if 'ACK~' in msg:
                 contents = msg.split('~')
                 # msg_socket.connect((contents[1], SERVER_SERVER_PORT))
                 # msg_socket.send(msg.encode())
@@ -324,23 +341,23 @@ def snd_msgs(out_queue : Queue, init: str):
                 msg_socket.close()
 
             # If the message is a health check
-            elif 'HEALTH~' in msg:
-                # send the message to every other server in the DS
-                for ip in snd_list:
-                    try:
-                        msg_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                        msg_socket.connect((ip, SERVER_SERVER_PORT))
-                        msg_socket.sendall(msg.encode())
-                        debug_print(f'Health Check sent to {ip}:\n\"{msg}\"')
-                    except ConnectionRefusedError:
-                        debug_print(f'The server {ip} refused the connection on port {SERVER_SERVER_PORT}\n')
-                        out_queue.put('LOST~' + ip)
-                    except TimeoutError:
-                        debug_print(f'Connection timeout on server {ip} with port {SERVER_SERVER_PORT}\n')
-                        out_queue.put('LOST~' + ip)
+            # elif 'HEALTH~' in msg:
+            #     # send the message to every other server in the DS
+            #     for ip in snd_list:
+            #         try:
+            #             msg_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            #             msg_socket.connect((ip, SERVER_SERVER_PORT))
+            #             msg_socket.sendall(msg.encode())
+            #             debug_print(f'Health Check sent to {ip}:\n\"{msg}\"')
+            #         except ConnectionRefusedError:
+            #             debug_print(f'The server {ip} refused the connection on port {SERVER_SERVER_PORT}\n')
+            #             out_queue.put('LOST~' + ip)
+            #         except TimeoutError:
+            #             debug_print(f'Connection timeout on server {ip} with port {SERVER_SERVER_PORT}\n')
+            #             out_queue.put('LOST~' + ip)
 
-                    # close connection to this particular server
-                    msg_socket.close()
+            #         # close connection to this particular server
+            #         msg_socket.close()
 
             # Notify of server going down
             elif 'LOST~' in msg:
@@ -483,26 +500,26 @@ def run_remote_cmds(in_queue: Queue, out_queue: Queue, pool):
             db = pool.get_connection()
             cursor = db.cursor()
 
-            if data_item[0] == "HEALTH":
-                debug_print("Am going to add this ACK")
-                ack = 'ACK~' + "HEALTH"
-                health_or_lost = True
+            # if data_item[0] == "HEALTH":
+            #     debug_print("Am going to add this ACK")
+            #     ack = 'ACK~' + "HEALTH"
+            #     health_or_lost = True
             # elif data_item[0] == "LOST":
             #     ack = 'ACK~' + data_item[1] + '~LOST'
             #     health_or_lost = True
-            else:
-                # execute the command in the message on the database
-                try:
-                    cursor.execute(data_item[2])
-                    db.commit()
-                    debug_print("Database update complete\n")
-                except:
-                    debug_print("There was an error updating the database\n")
-                    db.rollback()
+            # else:
+            # execute the command in the message on the database
+            try:
+                cursor.execute(data_item[2])
+                db.commit()
+                debug_print("Database update complete\n")
+            except:
+                debug_print("There was an error updating the database\n")
+                db.rollback()
 
-            if not health_or_lost:
+            # if not health_or_lost:
             # format ack message and add it to out queue
-                ack = 'ACK~' + data_item[1] + '~' + data_item[2]  
+            ack = 'ACK~' + data_item[1] + '~' + data_item[2]  
               
             out_queue.put(ack)
 
