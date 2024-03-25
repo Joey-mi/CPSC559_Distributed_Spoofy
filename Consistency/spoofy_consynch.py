@@ -586,43 +586,15 @@ def server_listener(in_queue: Queue, out_queue: Queue, acks: deque, \
     # keep accepting connections from other servers and processing the
     # messages received from them
     while True:
-        try:
-            debug_print("Above server_listener.accept()")
-            (server_socket, addr) = server_listener.accept()
-            debug_print(f'Received connection from {addr}:')
+        debug_print("Above server_listener.accept()")
+        (server_socket, addr) = server_listener.accept()
+        debug_print(f'Received connection from {addr}:')
 
-            debug_print("Before thread")
+        debug_print("Before thread")
 
-            threading.Thread(target=rcv_msg, args=(server_socket, in_queue, \
-                            out_queue, acks, can_wr, need_t), daemon=True).start()
-            debug_print("After thread")
-        except socket.timeout:
-            # determine the IPs of all the crashed replicas
-            crashed_replicas = detect_crashes()
-
-            # remove all the failed replica IPs from the send list and recalculate
-            # this replica's predecessor and neighbour
-            for ip in crashed_replicas:
-                debug_print("Before process_ips in snd_msgs")
-                process_ips(list(SND_LIST), ip, can_wr)
-                debug_print("After process_ips in snd_msgs")
-
-            # Queue up drop messages to be sent to all the other servers. This
-            # can't be done in the above while loop because the send list is
-            # constantly being changed so if these message were in the in queue
-            # at that time there is a chance an error would occur where they
-            # would be sent to crashed replicas. So these messages are added to 
-            # the out queue now since the send list if finalized.
-            for ip in crashed_replicas:
-                out_queue.put('DROP~' + ip)
-
-            # Put a token in the out queue as well so that token passing can
-            # commence again. Not sure if this is the right thing to do,
-            # ideally the token would be sent to the the first replica to
-            # make a change after the token left this replica last time, but
-            # unsure how to implement that w/o chanfing a lot of this and
-            # adding timestamps to everything.
-            out_queue.put(TOKEN_MSG)
+        threading.Thread(target=rcv_msg, args=(server_socket, in_queue, \
+                        out_queue, acks, can_wr, need_t), daemon=True).start()
+        debug_print("After thread")
 
 #==============================================================================
 
