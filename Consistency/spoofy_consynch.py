@@ -269,7 +269,9 @@ def run_cmd(php_listener: socket, out_queue: Queue, pool, acks: deque, \
 
             # remove the predecessor's ip from the list of ips and recalculate
             # this replica's predecessor and successor
+            debug_print("Before process_ips in run_cmd")
             process_ips(list(SND_LIST), problem_ip, can_wr)
+            debug_print("After process_ips in run_cmd")
 
             # set up a message for the predecessor's ip to be dropped from all
             # other replica's send list
@@ -320,7 +322,9 @@ def acks_rcvd(out_queue: Queue, acks: deque, mysql_stmnt: str, can_wr: Event):
             # them from the send list and add them to a list of drop messages
             for ip_addr in SND_LIST:
                 if ip_addr not in ack_ips:
+                    debug_print("Before process_ips in acks_rcvd")
                     process_ips(list(SND_LIST), ip_addr, can_wr)
+                    debug_print("After process_ips in acks_rcvd")
                     drop_msgs.append('DROP~' + ip_addr)
 
             # add all the drop messages to the out queue
@@ -437,7 +441,9 @@ def snd_msgs(out_queue: Queue, init: str, can_wr: Event):
             # remove all the failed replica IPs from the send list and recalculate
             # this replica's predecessor and neighbour
             for ip in crashed_replicas:
+                debug_print("Before process_ips in snd_msgs")
                 process_ips(list(SND_LIST), ip, can_wr)
+                debug_print("After process_ips in snd_msgs")
 
             # Queue up drop messages to be sent to all the other servers. This
             # can't be done in the above while loop because the send list is
@@ -493,7 +499,9 @@ def snd_msgs(out_queue: Queue, init: str, can_wr: Event):
                         problem_ip = SUCCESSOR
 
                         # remove the successor's ip from the send list
+                        debug_print("Before process_ips in snd_msgs")
                         process_ips(list(SND_LIST), problem_ip, can_wr)
+                        debug_print("After process_ips in acks_msgs")
 
                         # set up a drop message to be sent
                         out_queue.put('DROP~' + problem_ip)
@@ -541,7 +549,7 @@ def detect_crashes():
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as check_socket:
             try:
                 check_socket.connect((ip, CHECK_PORT))
-            except (ConnectionRefusedError, ConnectionResetError, socket.gaierror):
+            except (ConnectionRefusedError, ConnectionResetError, socket.gaierror, TimeoutError):
                 crashed_replicas.append(ip)
 
     return crashed_replicas
@@ -576,11 +584,15 @@ def server_listener(in_queue: Queue, out_queue: Queue, acks: deque, \
     # keep accepting connections from other servers and processing the
     # messages received from them
     while True:
+        debug_print("Above server_listener.accept()")
         (server_socket, addr) = server_listener.accept()
         debug_print(f'Received connection from {addr}:')
 
+        debug_print("Before thread")
+
         threading.Thread(target=rcv_msg, args=(server_socket, in_queue, \
                          out_queue, acks, can_wr, need_t), daemon=True).start()
+        debug_print("After thread")
 #==============================================================================
 
 #==============================================================================
@@ -627,7 +639,9 @@ def rcv_msg(conn: socket, in_queue: Queue, out_queue: Queue, acks: deque, \
     elif 'DROP~' in rcvd_msg:
         drop_msg = rcvd_msg.split('~')
         debug_print(f'Drop message received for {drop_msg[1]}') # Changed here
+        debug_print("Before process_ips in rcv_msg")
         process_ips(list(SND_LIST), drop_msg[1], can_wr) # Changed here
+        debug_print("After process_ips in rcv_msg")
 
     # otherwise the message is A change to the database so add it to the in queue
     # until it can be processed
