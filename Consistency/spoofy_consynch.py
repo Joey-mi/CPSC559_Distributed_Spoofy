@@ -625,9 +625,9 @@ def rcv_msg(conn: socket, in_queue: Queue, out_queue: Queue, acks: deque, \
     # and predecessor must be recalculated.
     # ***MUST TEST THIS WITH > 2 COMPUTERS***
     elif 'DROP~' in rcvd_msg:
-        debug_print(f'Drop message received for {drop_msg[1]}')
         drop_msg = rcvd_msg.split('~')
-        process_ips(list(SND_LIST), drop_msg[1], can_wr)
+        debug_print(f'Drop message received for {drop_msg[1]}') # Changed here
+        process_ips(list(SND_LIST), drop_msg[1], can_wr) # Changed here
 
     # otherwise the message is A change to the database so add it to the in queue
     # until it can be processed
@@ -713,7 +713,7 @@ def main():
     # determine local ip address
     if os.getenv('MACHINE') == 'MacOs':
         LOCAL_IP = netifaces.ifaddresses('en0')[netifaces.AF_INET][0]['addr']
-        print(f"Local IP addr is: {ip}")
+        print(f"Local IP addr is: {LOCAL_IP}")
     else:
         hostname = socket.gethostname()
         LOCAL_IP = socket.gethostbyname(hostname + ".local") 
