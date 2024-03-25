@@ -590,6 +590,12 @@ def server_listener(in_queue: Queue, out_queue: Queue, acks: deque, \
             debug_print("Above server_listener.accept()")
             (server_socket, addr) = server_listener.accept()
             debug_print(f'Received connection from {addr}:')
+
+            debug_print("Before thread")
+
+            threading.Thread(target=rcv_msg, args=(server_socket, in_queue, \
+                            out_queue, acks, can_wr, need_t), daemon=True).start()
+            debug_print("After thread")
         except socket.timeout:
             # determine the IPs of all the crashed replicas
             crashed_replicas = detect_crashes()
@@ -618,11 +624,6 @@ def server_listener(in_queue: Queue, out_queue: Queue, acks: deque, \
             # adding timestamps to everything.
             out_queue.put(TOKEN_MSG)
 
-        debug_print("Before thread")
-
-        threading.Thread(target=rcv_msg, args=(server_socket, in_queue, \
-                         out_queue, acks, can_wr, need_t), daemon=True).start()
-        debug_print("After thread")
 #==============================================================================
 
 #==============================================================================
