@@ -297,7 +297,10 @@ def acks_rcvd(out_queue: Queue, acks: deque, mysql_stmnt: str, can_wr: Event):
     '''
 
     drop_msgs = []
-    debug_print(f'Checking if acks received for \'{LOCAL_IP}\'')
+    if len(SND_LIST) != 0:
+        debug_print(f'Checking if acks received for \'{LOCAL_IP}\'')
+    else:
+        debug_print('Only one replica remaining. No acks to receive.')
 
     # retrieve the current time in order to timeout if all acks are not
     # recieved
