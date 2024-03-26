@@ -228,7 +228,7 @@ def run_cmd(php_listener: socket, out_queue: Queue, pool, acks: deque, \
                 cursor.execute(mysql_stmnt)
                 spoofyDB.commit()
                 debug_print('Database update completed\n')
-            except:
+            except mysql.connector.Error:
                 debug_print('There was an error updating the database\n')
                 spoofyDB.rollback()
 
