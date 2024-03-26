@@ -542,7 +542,8 @@ def detect_crashes():
             check_socket.settimeout(1)
             try:
                 check_socket.connect((ip, CHECK_PORT))
-            except (ConnectionRefusedError, ConnectionResetError, socket.gaierror):
+            except (ConnectionRefusedError, ConnectionResetError, socket.gaierror,\
+                    TimeoutError):
                 crashed_replicas.append(ip)
 
     return crashed_replicas
