@@ -523,6 +523,8 @@ def snd_msgs(out_queue: Queue, init: str, can_wr: Event):
                             debug_print(f'The server {ip} refused the connection on port {SERVER_SERVER_PORT}\n')
 
             debug_print('Message sent\n')
+            if len(SND_LIST) == 0:
+                debug_print('Only one replica left in DS. Token passing is finished.')
 #==============================================================================
 
 #==============================================================================
