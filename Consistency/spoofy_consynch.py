@@ -5,7 +5,7 @@
 # - All of the other replicas must be started before starting the primiary
 #   replica
 # - To run a non-primary replica write this on the command line:
-#   'python spoofy_consynch2.py no <list of all IPs in DS separate w/ spaces>''
+#   'python spoofy_consynch.py no <list of all IPs in DS separate w/ spaces>''
 #   For example, if you want to run the DS with three replicas w/ IPs of
 #   10.0.0.131, 10.0.0.252, and 10.0.0.311 then you would input:
 #   'python spoofy_consynch2.py no 10.0.0.131 10.0.0.252 10.0.0.311'
@@ -457,7 +457,7 @@ def snd_msgs(out_queue: Queue, init: str, can_wr: Event):
             out_queue.put(TOKEN_MSG)
 
     # while there are messages in the out queue do the following
-        while not out_queue.empty():# and not STOP_ALL.is_set():
+        while not out_queue.empty():
 
             # pull the message at the front of the queue and prepare socket
             msg = out_queue.get()
@@ -625,8 +625,8 @@ def rcv_msg(conn: socket, in_queue: Queue, out_queue: Queue, acks: deque, \
     # and predecessor must be recalculated.
     # ***MUST TEST THIS WITH > 2 COMPUTERS***
     elif 'DROP~' in rcvd_msg:
-        debug_print(f'Drop message received for {drop_msg[1]}')
         drop_msg = rcvd_msg.split('~')
+        debug_print(f'Drop message received for {drop_msg[1]}')
         process_ips(list(SND_LIST), drop_msg[1], can_wr)
 
     # otherwise the message is A change to the database so add it to the in queue
