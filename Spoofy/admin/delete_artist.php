@@ -13,9 +13,9 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
     //     $prepare -> bind_param("s", $ID);
     //     $prepare -> execute();
     // }
-    if ($prepare) {
-        $prepare -> close();
-    }
+    // if ($prepare) {
+    //     $prepare -> close();
+    // }
     header("Refresh:0; url=manage_artists.php");
     // header("location: manage_artists.php");
 } else {
