@@ -539,6 +539,7 @@ def detect_crashes():
         # then just continue, otherwise if an error is thrown note the ip
         # address that caused the connection to fail.
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as check_socket:
+            check_socket.settimeout(1)
             try:
                 check_socket.connect((ip, CHECK_PORT))
             except (ConnectionRefusedError, ConnectionResetError, socket.gaierror):
@@ -713,7 +714,7 @@ def main():
     # determine local ip address
     if os.getenv('MACHINE') == 'MacOs':
         LOCAL_IP = netifaces.ifaddresses('en0')[netifaces.AF_INET][0]['addr']
-        print(f"Local IP addr is: {ip}")
+        print(f"Local IP addr is: {LOCAL_IP}")
     else:
         hostname = socket.gethostname()
         LOCAL_IP = socket.gethostbyname(hostname + ".local") 
