@@ -519,7 +519,7 @@ def snd_msgs(out_queue: Queue, init: str, can_wr: Event):
                             msg_socket.send(msg.encode())
                             debug_print(f'Message sent to {ip}:\n\"{msg}\"')
                         except (ConnectionRefusedError, ConnectionResetError, \
-                                socket.gaierror):
+                                socket.gaierror, TimeoutError):
                             debug_print(f'The server {ip} refused the connection on port {SERVER_SERVER_PORT}\n')
 
             debug_print('Message sent\n')
@@ -612,6 +612,8 @@ def rcv_msg(conn: socket, in_queue: Queue, out_queue: Queue, acks: deque, \
     '''
 
     # receive a message from another replica
+
+    # HAVE TO CATCH A CONNECTIONRESET HERE!!!!
     rcvd_msg = conn.recv(PACKET_SIZE).decode()
     debug_print(f'Message received is:\n\"{rcvd_msg}\"')
 
