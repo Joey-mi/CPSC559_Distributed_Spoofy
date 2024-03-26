@@ -90,8 +90,6 @@ def process_ips(ip_addrs: list, to_remove: str, can_wr: Event):
         ip_addrs.remove(to_remove)
         debug_print(f'\'{to_remove}\' removed from SND_LIST')
 
-    debug_print(f'IP dropped. All the IPs in the systems are now {sort}')
-
     # sort the list of replica IPs in ascending order
     sorted_ips = sorted(ip_addrs)
 
