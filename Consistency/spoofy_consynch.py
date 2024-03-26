@@ -83,13 +83,19 @@ def process_ips(ip_addrs: list, to_remove: str, can_wr: Event):
     if LOCAL_IP not in ip_addrs:
         ip_addrs.append(LOCAL_IP)
 
+    debug_print(f'All the IPs in the system are: {sorted(ip_addrs)}')
+
     # if a crashed replica's IP was provided remove it from the list
     if to_remove != '' and to_remove in ip_addrs:
         ip_addrs.remove(to_remove)
         debug_print(f'\'{to_remove}\' removed from SND_LIST')
 
+    debug_print(f'IP dropped. All the IPs in the systems are now {sort}')
+
     # sort the list of replica IPs in ascending order
     sorted_ips = sorted(ip_addrs)
+
+    debug_print(f'{to_remove} dropped. All the IPs in the systems are now: {sorted_ips}')
 
     # determine where this replica's IP is in the list of IPs
     own_index = sorted_ips.index(LOCAL_IP)
