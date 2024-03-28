@@ -1,19 +1,25 @@
 # INSTRUCTIONS:
-
+#
 # - Run this code on every computer that will act as a replica
-# - There will be one 'primary' replica and then the other replicas
-# - All of the other replicas must be started before starting the primiary
-#   replica
-# - To run a non-primary replica write this on the command line:
-#   'python spoofy_consynch.py no <list of all IPs in DS separate w/ spaces>''
-#   For example, if you want to run the DS with three replicas w/ IPs of
-#   10.0.0.131, 10.0.0.252, and 10.0.0.311 then you would input:
-#   'python spoofy_consynch2.py no 10.0.0.131 10.0.0.252 10.0.0.311'
-#   It doesn't matter what order you enter the IPs in.
-# - Once the other replicas are running you can run the 'primary' replica.
-#   You can start the primary with the same list of IPs but the first 
-#   argument will be different. It will be:
-#   'python spoofy_consynch.py prim 10.0.0.131 10.0.0.252 10.0.0.311'
+# - There will be one 'primary' replica and then the other non-primary replicas
+# - All of the other replica's code must be running BEFORE running the 'primary'
+#   replica's code
+# 
+# COMMANDS
+#      > TO RUN PRIMARY REPLICA W/ A PROXY:
+#        python spoofy_distributor.py --prim --proxy <list of ALL replicas in system, INCLUDING your own>
+#
+#      > TO RUN PRIMARY REPLICA W/O A PROXY
+#        python spoofy_distributor.py --prim --no <list of ALL replicas in system, INCLUDING your own>
+#
+#      > TO RUN NON-PRIMARY REPLICA W/ A PROXY
+#        python spoofy_distributor.py --no --proxy <list of ALL replicas in system, INCLUDING your own>
+#
+#      > TO RUN NON-PRIMARY REPLICA W/O A PROXY
+#        python spoofy_distributor.py --no --no <list of ALL replicas in system, INCLUDING your own>
+#
+#      > example of a non-primary replica w/ a proxy:
+#        python spoofy_distributor.py --no --proxy 10.13.83.202 10.13.105.49 10.13.145.125
 
 import socket, multiprocessing, sys, threading, mysql.connector, time, os
 import netifaces
@@ -48,8 +54,10 @@ DOTENV_PATH = Path('../.env')  # path to .eve file
 PROXY_LISTEN =  5150           # port used to receive health checks from the
                                # proxy
 PROXY_SEND = 13000             # port the Apache server is running on
-PROXY_IP = ''
-
+APACHE_REQUEST = 'http://localhost:80/music/songs.php' # request to send to 
+                                                       # Spoofy website to check
+                                                       # if Apache server is still
+                                                       # running
 #==============================================================================
 def debug_print(msg: str):
     '''
@@ -709,54 +717,47 @@ def run_remote_cmds(in_queue: Queue, out_queue: Queue, pool):
 #==============================================================================
 
 #==============================================================================
-def proxy_listener(proxy_replies: Queue):
+def proxy_health_checker():
 
-    # create a socket to listen for messages from other servers
-    proxy_listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    '''
+    Listens for health checks from proxy. If a health check is registered
+    then a request will be sent to the Spoofy website to see if it's available.
+    The repsonse from the Spoofy website will then be sent back to the 
+    proxy.
 
-    # start listening for other servers
-    proxy_listener.bind((LOCAL_IP, PROXY_LISTEN))
-    proxy_listener.listen(5)
+    params: N/A
 
-    # keep accepting connections from other servers and processing the
-    # messages received from them
-    while True:
-        (proxy_socket, addr) = proxy_listener.accept()
-        debug_print(f'Received health check from proxy')
+    returns: N/A
+    '''
 
-        threading.Thread(target=query_apache, args=(proxy_replies,),
-                         daemon=True).start()
-#==============================================================================
+    # create a listener for proxy health checks
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as proxy_listener:
+        proxy_listener.bind(('', PROXY_LISTEN))
+        proxy_listener.listen()
 
-#==============================================================================
-def query_apache(proxy_replies: Queue):
-    # DOING THIS WILL LIKELY REQUIRE US TO ALL RUN THE APACHE SERVER ON THE SAME
-    # PORT. CURRENTLY USING PORT 13000 FOR THIS.
+        while True:
+            client, addr = proxy_listener.accept()
 
-    apache_request = requests.head(LOCAL_IP + '/Spoofy/index.php')
+            # while the proxy is still communicating keep getting repsonse codes
+            # from the website
+            with client:
+                while True:
+                    data = client.recv(PACKET_SIZE)
 
-    proxy_replies.put(apache_request.status_code.encode())
-#==============================================================================
+                    if not data:
+                        break
 
-#==============================================================================
-def snd_apache_replies(proxy_replies: Queue):
-
-    while True:
-
-        if not proxy_replies.empty():
-
-            reply = proxy_replies.get()
-
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as reply_socket:
-                reply_socket.connect((PROXY_IP, PROXY_SEND)) 
-                reply_socket.sendall(reply)
+                    # get a response code from the website and send it back to
+                    # the proxy
+                    apache_request = requests.head(APACHE_REQUEST)
+                    if apache_request.status_code <= 399:
+                        client.sendall(b'GOOD')
 #==============================================================================
 
 #==============================================================================
 def main():
 
     global LOCAL_IP                # local ip address of this replica
-    global PROXY_IP                # the IP address of the proxy
     out_queue = Queue()            # out queue of messages to send to other 
                                    # replicas
     in_queue = Queue()             # in queue of messages received from other 
@@ -767,7 +768,6 @@ def main():
                                    # wants to make changes to the database
     acks = deque([])               # contains acks that a write operation was 
                                    # performed across all other replicas
-    proxy_replies  = Queue()       # queue of replies to send to proxy
 
     # allow the accessing of the .env file
     load_dotenv(dotenv_path=DOTENV_PATH)
@@ -784,14 +784,8 @@ def main():
 
     # Make an ordered list of all other replicase in the DS, determine this
     # replica's predecessor and successor and calculate the number of acks
-    # this replica should receive. If the command line arguments indicate
-    # that a proxy is being used then determine the proxy's IP address as
-    # well.
-    if sys.argv[2] == "--proxy"
-        PROXY_IP = sys.argv[3]
-        process_ips(sys.argv[4:], '', can_write)
-    else:
-        process_ips(sys.argv[3:], '', can_write)
+    # this replica should receive.
+    process_ips(sys.argv[3:], '', can_write)
 
     # create connection pool for local MySQL database
     try:
@@ -828,11 +822,9 @@ def main():
                      db_pool), daemon=True).start()
     debug_print('Receive thread started')
 
+    # if there is a proxy receive health checks from it
     if sys.argv[2] == '--proxy':
-        threading.Thread(target=proxy_listener, args=(proxy_replies,),
-                         daemon=True).start()
-        threading.Thread(target=snd_apache_replies, args=(proxy_replies,),\
-                         daemon=True).start()
+        threading.Thread(target=proxy_health_checker, daemon=True).start()
 
     # Run this loop so that the main thread will continue running. This is done
     # because Python 12.0 cannot run other threads if the main thread has
