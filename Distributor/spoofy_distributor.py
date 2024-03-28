@@ -5,7 +5,7 @@
 # - All of the other replica's code must be running BEFORE running the 'primary'
 #   replica's code
 # 
-# COMMANDS
+# COMMANDS:
 #      > TO RUN PRIMARY REPLICA W/ A PROXY:
 #        python spoofy_distributor.py --prim --proxy <list of ALL replicas in system, INCLUDING your own>
 #
@@ -20,6 +20,13 @@
 #
 #      > example of a non-primary replica w/ a proxy:
 #        python spoofy_distributor.py --no --proxy 10.13.83.202 10.13.105.49 10.13.145.125
+#
+# INSTALLS:
+#   To run this code run the following installation commands:
+#       pip install mysql-connector-python
+#       pip install netifaces
+#       pip install python-dotenv
+#       pip install requests
 
 import socket, multiprocessing, sys, threading, mysql.connector, time, os
 import netifaces
