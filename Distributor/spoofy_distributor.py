@@ -22,6 +22,7 @@ from queue import Queue
 from collections import deque
 from dotenv import load_dotenv
 from pathlib import Path
+import requests
 
 PHP_PORT = 9000                # port used to receive MySQL commands from 
                                # website
@@ -44,6 +45,10 @@ PREDECESSOR = ''               # the IP of the replica directly behind this one
 NUM_ACKS = 0                   # number of acks to expect from the other replicas
 LOCAL_IP=''                    # local IP address of this replica
 DOTENV_PATH = Path('../.env')  # path to .eve file
+PROXY_LISTEN =  5150           # port used to receive health checks from the
+                               # proxy
+PROXY_SEND = 13000             # port the Apache server is running on
+PROXY_IP = ''
 
 #==============================================================================
 def debug_print(msg: str):
@@ -463,7 +468,7 @@ def snd_msgs(out_queue: Queue, init: str, can_wr: Event):
             # adding timestamps to everything.
             out_queue.put(TOKEN_MSG)
 
-    # while there are messages in the out queue do the following
+        # while there are messages in the out queue do the following
         while not out_queue.empty():
 
             # pull the message at the front of the queue and prepare socket
@@ -704,9 +709,54 @@ def run_remote_cmds(in_queue: Queue, out_queue: Queue, pool):
 #==============================================================================
 
 #==============================================================================
+def proxy_listener(proxy_replies: Queue):
+
+    # create a socket to listen for messages from other servers
+    proxy_listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    # start listening for other servers
+    proxy_listener.bind((LOCAL_IP, PROXY_LISTEN))
+    proxy_listener.listen(5)
+
+    # keep accepting connections from other servers and processing the
+    # messages received from them
+    while True:
+        (proxy_socket, addr) = proxy_listener.accept()
+        debug_print(f'Received health check from proxy')
+
+        threading.Thread(target=query_apache, args=(proxy_replies,),
+                         daemon=True).start()
+#==============================================================================
+
+#==============================================================================
+def query_apache(proxy_replies: Queue):
+    # DOING THIS WILL LIKELY REQUIRE US TO ALL RUN THE APACHE SERVER ON THE SAME
+    # PORT. CURRENTLY USING PORT 13000 FOR THIS.
+
+    apache_request = requests.head(LOCAL_IP + '/Spoofy/index.php')
+
+    proxy_replies.put(apache_request.status_code.encode())
+#==============================================================================
+
+#==============================================================================
+def snd_apache_replies(proxy_replies: Queue):
+
+    while True:
+
+        if not proxy_replies.empty():
+
+            reply = proxy_replies.get()
+
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as reply_socket:
+                reply_socket.connect((PROXY_IP, PROXY_SEND)) 
+                reply_socket.sendall(reply)
+#==============================================================================
+
+#==============================================================================
 def main():
 
     global LOCAL_IP                # local ip address of this replica
+    global PROXY_IP                # the IP address of the proxy
     out_queue = Queue()            # out queue of messages to send to other 
                                    # replicas
     in_queue = Queue()             # in queue of messages received from other 
@@ -717,6 +767,7 @@ def main():
                                    # wants to make changes to the database
     acks = deque([])               # contains acks that a write operation was 
                                    # performed across all other replicas
+    proxy_replies  = Queue()       # queue of replies to send to proxy
 
     # allow the accessing of the .env file
     load_dotenv(dotenv_path=DOTENV_PATH)
@@ -731,10 +782,16 @@ def main():
         hostname = socket.gethostname()
         LOCAL_IP = socket.gethostbyname(hostname + ".local") 
 
-    # make an ordered list of all other replicase in the DS, determine this
+    # Make an ordered list of all other replicase in the DS, determine this
     # replica's predecessor and successor and calculate the number of acks
-    # this replica should receive
-    process_ips(sys.argv[2:], '', can_write)
+    # this replica should receive. If the command line arguments indicate
+    # that a proxy is being used then determine the proxy's IP address as
+    # well.
+    if sys.argv[2] == "--proxy"
+        PROXY_IP = sys.argv[3]
+        process_ips(sys.argv[4:], '', can_write)
+    else:
+        process_ips(sys.argv[3:], '', can_write)
 
     # create connection pool for local MySQL database
     try:
@@ -770,6 +827,12 @@ def main():
     threading.Thread(target=run_remote_cmds, args=(in_queue, out_queue, \
                      db_pool), daemon=True).start()
     debug_print('Receive thread started')
+
+    if sys.argv[2] == '--proxy':
+        threading.Thread(target=proxy_listener, args=(proxy_replies,),
+                         daemon=True).start()
+        threading.Thread(target=snd_apache_replies, args=(proxy_replies,),\
+                         daemon=True).start()
 
     # Run this loop so that the main thread will continue running. This is done
     # because Python 12.0 cannot run other threads if the main thread has
