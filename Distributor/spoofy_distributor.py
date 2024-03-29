@@ -749,16 +749,19 @@ def proxy_health_checker():
             # from the website
             with client:
                 while True:
-                    data = client.recv(PACKET_SIZE)
+                    try:
+                        data = client.recv(PACKET_SIZE)
 
-                    if not data:
+                        if not data:
+                            break
+
+                        # get a response code from the website and send it back to
+                        # the proxy
+                        apache_request = requests.head(APACHE_REQUEST)
+                        if apache_request.status_code <= 399:
+                            client.sendall(b'GOOD')
+                    except:
                         break
-
-                    # get a response code from the website and send it back to
-                    # the proxy
-                    apache_request = requests.head(APACHE_REQUEST)
-                    if apache_request.status_code <= 399:
-                        client.sendall(b'GOOD')
 #==============================================================================
 
 #==============================================================================
