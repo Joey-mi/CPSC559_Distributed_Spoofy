@@ -119,15 +119,12 @@ def process_ips(ip_addrs: list, to_remove: str, can_wr: Event):
     own_index = sorted_ips.index(LOCAL_IP)
 
     # Determine this replica's successor's IP address to send the token to.
-    # SUCCESSOR is a global string, may need some massaging here to make 
-    # it fully thread safe.
     if own_index == (len(sorted_ips) - 1):
         SUCCESSOR = sorted_ips[0]
     else:
         SUCCESSOR = sorted_ips[own_index + 1]
 
-    # Determine this replica's predecessor's IP address. PREDECESSOR is a global
-    # string, may need some massaging here to make it fully thread safe.
+    # Determine this replica's predecessor's IP address.
     if own_index == 0:
         PREDECESSOR = sorted_ips[-1]
     else:
@@ -136,12 +133,10 @@ def process_ips(ip_addrs: list, to_remove: str, can_wr: Event):
     # remove this replica's IP from the list, no need to send messages to itself
     sorted_ips.remove(LOCAL_IP)
 
-    # Convert the sorted and formatted list to a deque. This is a global deque,
-    # may need some massaging to make it fully thread safe here.
+    # Convert the sorted and formatted list to a deque.
     SND_LIST = deque(sorted_ips)
 
-    # Calculate the number of acks this replica should expect back. This is a 
-    # global value, may need some massaging to make it fully thread safe here.
+    # Calculate the number of acks this replica should expect back.
     NUM_ACKS = len(SND_LIST)
 
     # If this replica is the last one running in the DS set it so that it can
@@ -214,8 +209,6 @@ def run_cmd(php_listener: socket, out_queue: Queue, pool, acks: deque, \
     return N/A
     '''
 
-    data = b'' # data containing MySQL query received from website
-
     # receive data from client
     data = php_listener.recv(PACKET_SIZE)
 
@@ -248,6 +241,8 @@ def run_cmd(php_listener: socket, out_queue: Queue, pool, acks: deque, \
 
         # if the token was received do the following
         if token_recv:
+
+            # attempt to make run the received command on the database
             try:
                 cursor.execute(mysql_stmnt)
                 spoofyDB.commit()
@@ -282,7 +277,7 @@ def run_cmd(php_listener: socket, out_queue: Queue, pool, acks: deque, \
             # close connection to the client
             php_listener.close()
 
-            # if a databse update occured then to loop can end
+            # if a databse update occured then this while loop can end
             try_execution = False
 
         # if there was a timeout and the token never arrived do the following
@@ -310,7 +305,10 @@ def acks_rcvd(out_queue: Queue, acks: deque, mysql_stmnt: str, can_wr: Event):
     '''
     Keeps running until acks for a write operation have been received from
     all other servers in the system. The correctness of the acks are not
-    considered here, just that the correct amount have been received.
+    considered here, just that the correct amount have been received. If
+    a timeout occurs waiting for the correct amount of acks a check is done
+    to see if any replicas have crashed. If so they are removed from the list
+    of replicas and the number of acks expected is recalculated.
 
     param out_queue: queue of messages to be sent to other replicas
     param acks: list of acks received from other servers
@@ -320,7 +318,8 @@ def acks_rcvd(out_queue: Queue, acks: deque, mysql_stmnt: str, can_wr: Event):
     returns N/A
     '''
 
-    drop_msgs = []
+    drop_msgs = [] # list of drop messages to send to other replicas
+
     if len(SND_LIST) != 0:
         debug_print(f'Checking if acks received for \'{LOCAL_IP}\'')
     else:
@@ -335,16 +334,17 @@ def acks_rcvd(out_queue: Queue, acks: deque, mysql_stmnt: str, can_wr: Event):
     while len(acks) != NUM_ACKS:
 
         # Calculate how long this loop has been running. If it has timed
-        # out determine the replica that has not acked and proceed to
+        # out determine the replica that has not acked back and proceed to
         # remove it from the list of ips
         current = time.time()
         if current - start > TIMEOUT:
 
-            # convert the acks deque into a list of the acks
+            # convert the acks deque into a list of ips acks have been received
+            # from
             ack_ips = ack_ips_to_list(acks)
 
-            # determine the replicas acks have not been received from and remove
-            # them from the send list and add them to a list of drop messages
+            # determine the replicas' acks that have not been received from and 
+            # remove them from the send list and add them to a list of drop messages
             for ip_addr in SND_LIST:
                 if ip_addr not in ack_ips:
                     process_ips(list(SND_LIST), ip_addr, can_wr)
@@ -423,11 +423,6 @@ def snd_msgs(out_queue: Queue, init: str, can_wr: Event):
     startup. If the replica is starting for the first time and it's set as the
     primary it will initiate the passing of the token.
 
-    NOTE: LINES 345-375 ARE ATTEMPTING TO DEAL WITH THE PROBLEM OF A TOKEN
-          BEING LOST IN BETWEEN SERVERS THAT AREN'T ATTEMPTING TO MAKE ANY
-          WRITE OPERATION. NOT SURE IF THIS WILL WORK UNTIL FURTHER TESTING
-          WITH > 2 COMPUTERS.
-
     param out_queue: outgoing messages queue
     param init: inidicates if this replica should initiate token passing
     param can_wr: threading event indicating if this replica can perform a
@@ -471,17 +466,12 @@ def snd_msgs(out_queue: Queue, init: str, can_wr: Event):
             # constantly being changed so if these message were in the in queue
             # at that time there is a chance an error would occur where they
             # would be sent to crashed replicas. So these messages are added to 
-            # the out queue now since the send list if finalized.
+            # the out queue now since the send list is finalized.
             for ip in crashed_replicas:
                 out_queue.put('DROP~' + ip)
 
             # Put a token in the out queue as well so that token passing can
-            # commence again. Not sure if this is the right thing to do,
-            # ideally the token would be sent to the the first replica to
-            # make a change after the token left this replica last time, but
-            # unsure how to implement that w/o chanfing a lot of this and
-            # adding timestamps to everything.
-            out_queue.put(TOKEN_MSG)
+            # commence again.
 
         # while there are messages in the out queue do the following
         while not out_queue.empty():
@@ -525,8 +515,8 @@ def snd_msgs(out_queue: Queue, init: str, can_wr: Event):
                         # set up a drop message to be sent
                         out_queue.put('DROP~' + problem_ip)
 
-            # otherwise the message is a database statement that all the other
-            # replicas must run, so send it to all other replicas
+            # otherwise the message is a database update or drop message that all
+            # other replicas must receive, so send it to all other replicas
             else:
                 debug_print(f'The number of replicas to send to is: {len(SND_LIST)}')
 
@@ -543,6 +533,9 @@ def snd_msgs(out_queue: Queue, init: str, can_wr: Event):
                             debug_print(f'The server {ip} refused the connection on port {SERVER_SERVER_PORT}\n')
 
             debug_print('Message sent\n')
+
+            # if there's only one replica left in the system print a message to
+            # this effect so the user won't worry about receiving replies
             if len(SND_LIST) == 0:
                 debug_print('Only one replica left in DS. Token passing is finished.')
 #==============================================================================
@@ -634,8 +627,6 @@ def rcv_msg(conn: socket, in_queue: Queue, out_queue: Queue, acks: deque, \
     '''
 
     # receive a message from another replica
-
-    # HAVE TO CATCH A CONNECTIONRESET HERE!!!!
     rcvd_msg = conn.recv(PACKET_SIZE).decode()
     debug_print(f'Message received is:\n\"{rcvd_msg}\"')
 
@@ -656,13 +647,12 @@ def rcv_msg(conn: socket, in_queue: Queue, out_queue: Queue, acks: deque, \
     # If the message is a drop message then the server with the provided IP
     # must be removed from the send list and this replica's successor
     # and predecessor must be recalculated.
-    # ***MUST TEST THIS WITH > 2 COMPUTERS***
     elif 'DROP~' in rcvd_msg:
         drop_msg = rcvd_msg.split('~')
         debug_print(f'Drop message received for {drop_msg[1]}')
         process_ips(list(SND_LIST), drop_msg[1], can_wr)
 
-    # otherwise the message is A change to the database so add it to the in queue
+    # otherwise the message is a database update so add it to the in queue
     # until it can be processed
     else:
         in_queue.put(rcvd_msg)
@@ -687,9 +677,10 @@ def run_remote_cmds(in_queue: Queue, out_queue: Queue, pool):
     return N/A
     '''
 
-    # while the in queue contains items do the following
+    # while the program is running attempt to do the following
     while True:
 
+        # while the in queue contains items do the following
         while not in_queue.empty():
 
             # retrieve the oldest message in the in queue and split it apart
@@ -697,7 +688,7 @@ def run_remote_cmds(in_queue: Queue, out_queue: Queue, pool):
             data_item = in_queue.get().split('~')
 
             # Sometimes when a replica crashes the others can receive an
-            # empty write operatino. If this happens just ignore it.
+            # empty write operation. If this happens just ignore it.
             if data_item[0] != '':
                 debug_print(f'Commands for writing are: {data_item}')
 
