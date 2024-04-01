@@ -1,27 +1,19 @@
 # CPSC559_Spoofy
 
-A web application for CPSC 559 - Databases
-
-See the [Final Report](Reports/Final_Report.pdf) for more details.
-
-The [Functional Model](Reports/Functional_Model.pdf) includes the HIPO diagram, complete list of HIPO functions, DFD Diagram, and complete list of SQL Statements.
-
-Additionally, see the [Diagrams](Diagrams/Diagrams.md) to inspect individual diagrams.
+A distributed web application for CPSC 559 - Databases
 
 ## Code Development
 
 **Tools**:
  - PHP as the frontend
- - Apache as the server
+ - Apache as the servers
  - MySQL as the database
+ - HAProxy as the proxy/load balancer
+ - Python script running synchronizing and replicating the servers and database
 
 Clone the project to a local directory:
 
- - `git clone https://github.com/alexs2112/CPSC471_Spoofy.git`
-
-Small things to be done and cleaned up in the future are marked in comments with `@todo`. 
-
-Our required unfinished tasks are in [Tasks.md](Tasks.md)
+ - `git clone https://github.com/Joey-mi/CPSC559_Distributed_Spoofy.git`
 
 ## Linking with MySQL
 The first thing that needs to be created is the `SpoofyDB` database. This can be done through the mysql command line utility.
@@ -73,4 +65,29 @@ Once AppServ is installed, you need to edit the Apache default `DocumentRoot` to
  - Restart Apache with the `Apache Restart` utility installed with AppServ
  - Go to your webbrowser and go to `localhost` (optionally `localhost:80`)
 
-Apache logs should be stored at `C:\AppServ\Apache24\logs`. If you open `error.log` in Visual Studio Code or something, it will automatically update the file whenever new logs are created.
+To allow for load balancing and the ability for a client to be connected to any server the default Apache `ServerName` will also need to be updated.
+ - Navigate to the AppServ install (default: `C:\AppServ\Apache24`)
+ - Open `conf\httpd.conf` (make a backup copy just in case)
+ - Ctrl-F to find `ServerName`, and change the IP to each server's current IP address. For example the `ServerName` could now read `ServerName 10.13.83.202:80`.
+  - Restart Apache with the `Apache Restart` utility installed with AppServ
+
+Apache logs should be stored at `C:\AppServ\Apache24\logs`. If you open `error.log` in Visual Studio Code it will automatically update the file whenever new logs are created.
+
+## Running Python Distributor File
+The file `spoofy_distributor.py` must be run on every computer that will host the database (every computer that will act as a replica). In order to run it the following Python module installations must be run:
+ - `pip install mysql-connector-python`
+ - `pip install netifaces`
+ - `pip install python-dotenv`
+ - `pip install requests`
+
+There will need to be a '**primary**' replica that initiates the passing of the token once all the replicas are running. This is indicated as the command line input `--prim`. The rest of the replicas can be run as a non-primary replica with the command line input `--no`. Note that the primary replica must be started after all the other replicas have their Python script running so that the token passing can commence properly. Also please note that all the replica python scripts must be started in quick succession to avoid triggering a timeout on the token passing. The program can be run two different ways, with a proxy included or without. In this instance a proxy will be a part of the system, so it can be indicated as the command line input `--proxy`. The rest of the command line inputs for the program are the IP addresses (in no particular order) of all the replicas in the system (including the IP of the computer the program is running on).
+
+**Commands:**
+ - TO RUN A NON-PRIMARY REPLICA WITH A PROXY
+    - `python spoofy_distributor.py --no --proxy <list of ALL replicas in system, INCLUDING your own>`
+ - TO RUN THE PRIMARY REPLICA WITH A PROXY
+    - `python spoofy_distributor.py --prim --proxy <list of ALL replicas in system, INCLUDING your own>`
+ - Example of a non-primary replica, with a proxy, and three replicas in the system
+   - `python spoofy_distributor.py --no --proxy 10.13.83.202 10.13.105.49 10.13.145.125`
+ - Example of a primary replica, with a proxy, and three replicas in the system
+   - `python spoofy_distributor.py --prim --proxy 10.13.83.202 10.13.105.49 10.13.145.125`
