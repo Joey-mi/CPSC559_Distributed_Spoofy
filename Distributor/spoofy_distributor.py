@@ -469,6 +469,7 @@ def snd_msgs(out_queue: Queue, init: str, can_wr: Event):
             # the out queue now since the send list is finalized.
             for ip in crashed_replicas:
                 out_queue.put('DROP~' + ip)
+                out_queue.put(TOKEN_MSG)
 
             # Put a token in the out queue as well so that token passing can
             # commence again.
@@ -665,7 +666,7 @@ def rcv_msg(conn: socket, in_queue: Queue, out_queue: Queue, acks: deque, \
         # close the connection for receiving messages
         conn.close()
     except ConnectionResetError:
-         continue
+         pass
 #==============================================================================
 
 #==============================================================================
