@@ -63,20 +63,7 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
 
 			$sql = "UPDATE ARTIST SET Name='$name', About='$about', ProfilePicture='$pfp', BannerPicture='$bp' WHERE ArtistID=$ArtistID";
 			sendQuery($sql);
-			// $sql = "UPDATE ARTIST SET Name=?, About=?, ProfilePicture=?, BannerPicture=? WHERE ArtistID=?";
-			// $prepare = mysqli_prepare($con, $sql);
-			if($prepare) {
-				
-				// // Bind all values
-				// $prepare -> bind_param("sssss", $name, $about, $pfp, $bp, $ArtistID);
-				// $prepare -> execute();
-				// $result = $prepare -> get_result();
-				
-				// Redirect to login page after registering
-				// header("location: manage_artists.php");
-				header("Refresh:0; url=manage_artists.php"); // Test for refreshing page after update
-				$prepare -> close();
-			}
+			header("Refresh:0; url=manage_artists.php"); // Test for refreshing page after update
 		}
 		
 		// Close connection

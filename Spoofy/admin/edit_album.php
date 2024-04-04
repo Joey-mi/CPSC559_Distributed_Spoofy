@@ -80,20 +80,7 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
 			// Prepare an insert statement
 			$sql = "UPDATE ALBUM SET Title='$title', IsSingle=$single, CoverArt='$cover', ReleaseDate='$release', Genre='$genre' WHERE AlbumID=$AlbumID";
 			sendQuery($sql);
-			// $sql = "UPDATE ALBUM SET Title=?, IsSingle=?, CoverArt=?, ReleaseDate=?, Genre=? WHERE AlbumID=?";
-			// $prepare = mysqli_prepare($con, $sql);
-			if($prepare) {
-				
-				// // Bind all values
-				// $prepare -> bind_param("ssssss", $title, $single, $cover, $release, $genre, $AlbumID);
-				// $prepare -> execute();
-				// $result = $prepare -> get_result();
-				
-				// Redirect to login page after registering
-				header("Refresh:0; url=manage_albums.php"); 
-				// header("location: manage_albums.php");
-				$prepare -> close();
-			}
+			header("Refresh:0; url=manage_albums.php"); 
 		}
 		
 		// Close connection

@@ -18,12 +18,6 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
             if (mysqli_num_rows($result) == 0) {
                 $sql = "INSERT INTO ADMIN (AdminID) VALUES ($UserID)";
                 sendQuery($sql);
-                // $sql = "INSERT INTO ADMIN (AdminID) VALUES (?)";
-                // $prepare = mysqli_prepare($con, $sql);
-                // if ($prepare) {
-                //     $prepare -> bind_param("s", $UserID);
-                //     $prepare -> execute();
-                // }
             }
         }
         if ($prepare) {

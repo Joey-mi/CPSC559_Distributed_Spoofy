@@ -7,17 +7,7 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
     $ID = $_GET["SongID"];
     $sql = "UPDATE SONG SET MonthlyPlays=0 WHERE SongID=$ID";
     sendQuery($sql);
-    // $sql = "UPDATE SONG SET MonthlyPlays=0 WHERE SongID=?";
-    // $prepare = mysqli_prepare($con, $sql);
-    // if ($prepare) {
-    //     $prepare -> bind_param("s", $ID);
-    //     $prepare -> execute();
-    // }
-    if ($prepare) {
-        $prepare -> close();
-    }
     header("Refresh:0; url=manage_songs.php");
-    // header("location: manage_songs.php");
 } else {
     header("location: ../error.php");
 }

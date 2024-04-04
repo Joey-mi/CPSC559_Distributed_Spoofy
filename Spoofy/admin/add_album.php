@@ -62,20 +62,7 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
 			// Prepare an insert statement
 			$sql = "INSERT INTO ALBUM (Title, IsSingle, CoverArt, ReleaseDate, Genre) VALUES ('$title', $single, '$cover', '$release', '$genre')";
 			sendQuery($sql);
-			// $sql = "INSERT INTO ALBUM (Title, IsSingle, CoverArt, ReleaseDate, Genre) VALUES (?, ?, ?, ?, ?)";
-			// $prepare = mysqli_prepare($con, $sql);
-			if($prepare) {
-				
-				// // Bind all values
-				// $prepare -> bind_param("sssss", $title, $single, $cover, $release, $genre);
-				// $prepare -> execute();
-				// $result = $prepare -> get_result();
-				
-				// Redirect to login page after registering
-				header("Refresh:0; url=manage_albums.php"); 
-				// header("location: manage_albums.php");
-				$prepare -> close();
-			}
+			header("Refresh:0; url=manage_albums.php"); 
 		}
 		
 		// Close connection

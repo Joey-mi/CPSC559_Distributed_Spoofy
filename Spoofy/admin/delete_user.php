@@ -8,17 +8,7 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
     $ID = $_GET["UserID"];
     $sql = "DELETE FROM USER WHERE UserID=$ID";
     sendQuery($sql);
-    // $sql = "DELETE FROM USER WHERE UserID=?";
-    // $prepare = mysqli_prepare($con, $sql);
-    // if ($prepare) {
-    //     $prepare -> bind_param("s", $ID);
-    //     $prepare -> execute();
-    // }
-    if ($prepare) {
-        $prepare -> close();
-    }
     header("Refresh:0; url=manage_users.php");
-    // header("location: manage_users.php");
 } else {
     header("location: ../error.php");
 }

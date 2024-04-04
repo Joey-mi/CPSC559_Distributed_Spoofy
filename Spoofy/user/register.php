@@ -67,22 +67,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST") {
         // Prepare an insert statement
         $sql = "INSERT INTO USER (Username, PasswordHash, IsPremium) VALUES ('$username', $password_hash, FALSE)";
         sendQuery($sql);
-        // $sql = "INSERT INTO USER (Username, PasswordHash, IsPremium) VALUES (?, ?, FALSE)";
-        // $prepare = mysqli_prepare($con, $sql);
-        if($prepare) {
-
-            // // Hash the password before binding it
-            // $password_hash = hash("sha256", $password);
-            // $prepare -> bind_param("ss", $username, $password_hash);
-
-            // $prepare -> execute();
-            // $result = $prepare -> get_result();
-            
-            // Redirect to login page after registering
-            header("Refresh:0; url=/user/login.php");
-            // header("location: /user/login.php");
-            $prepare -> close();
-        }
+        header("Refresh:0; url=/user/login.php");
     }
     
     // Close connection

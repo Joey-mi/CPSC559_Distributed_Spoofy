@@ -7,17 +7,7 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
     $ID = $_GET["SongID"];
     $sql = "DELETE FROM SONG WHERE SongID=$ID";
     sendQuery($sql);
-    // $sql = "DELETE FROM SONG WHERE SongID=?";
-    // $prepare = mysqli_prepare($con, $sql);
-    // if ($prepare) {
-    //     $prepare -> bind_param("s", $ID);
-    //     $prepare -> execute();
-    // }
-    if ($prepare) {
-        $prepare -> close();
-    }
     header("Refresh:0; url=manage_songs.php");
-    // header("location: manage_songs.php");
 } else {
     header("location: ../error.php");
 }

@@ -44,20 +44,7 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
 			// Prepare an insert statement
 			$sql = "INSERT INTO SONG (Title, Duration, MusicFile, TotalPlays, MonthlyPlays) VALUES ('$title', $duration, '$filepath', 0, 0)";
 			sendQuery($sql);
-			// $sql = "INSERT INTO SONG (Title, Duration, MusicFile, TotalPlays, MonthlyPlays) VALUES (?, ?, ?, 0, 0)";
-			// $prepare = mysqli_prepare($con, $sql);
-			if($prepare) {
-				
-				// // Bind all values
-				// $prepare -> bind_param("sss", $title, $duration, $filepath);
-				// $prepare -> execute();
-				// $result = $prepare -> get_result();
-				
-				// Redirect to login page after registering
-				header("Refresh:0; url=manage_songs.php");
-				// header("location: manage_songs.php");
-				$prepare -> close();
-			}
+			header("Refresh:0; url=manage_songs.php");
 		}
 		
 		// Close connection
