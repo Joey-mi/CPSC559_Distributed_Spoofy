@@ -433,7 +433,7 @@ def snd_msgs(out_queue: Queue, init: str, can_wr: Event):
 
     # if this is the 'primary' replica start passing the token by sending
     # it to this replica's successor
-    if init == 'prim':
+    if init == '--prim':
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as msg_socket:
             msg_socket.connect((SUCCESSOR, SERVER_SERVER_PORT)) 
             msg_socket.send(TOKEN_MSG.encode())
