@@ -630,38 +630,42 @@ def rcv_msg(conn: socket, in_queue: Queue, out_queue: Queue, acks: deque, \
     '''
 
     # receive a message from another replica
-    rcvd_msg = conn.recv(PACKET_SIZE).decode()
-    debug_print(f'Message received is:\n\"{rcvd_msg}\"')
+    try:
+        rcvd_msg = conn.recv(PACKET_SIZE).decode()
 
-    # if the message is the token and this replica wants to make changes to the
-    # database then set this replica's ability to do so to True
-    if rcvd_msg == TOKEN_MSG and need_t.is_set():
-        can_wr.set()
+        debug_print(f'Message received is:\n\"{rcvd_msg}\"')
 
-    # if the message is the token and this replica doesn't need to make changes
-    # to the database add it to the out queue to be passed along
-    elif rcvd_msg == TOKEN_MSG and not need_t.is_set():
-        out_queue.put(rcvd_msg)
+        # if the message is the token and this replica wants to make changes to the
+        # database then set this replica's ability to do so to True
+        if rcvd_msg == TOKEN_MSG and need_t.is_set():
+            can_wr.set()
 
-    # if the message is an ack, add this ack to the list of acks
-    elif 'ACK~' in rcvd_msg:
-        acks.append(rcvd_msg)
+        # if the message is the token and this replica doesn't need to make changes
+        # to the database add it to the out queue to be passed along
+        elif rcvd_msg == TOKEN_MSG and not need_t.is_set():
+            out_queue.put(rcvd_msg)
 
-    # If the message is a drop message then the server with the provided IP
-    # must be removed from the send list and this replica's successor
-    # and predecessor must be recalculated.
-    elif 'DROP~' in rcvd_msg:
-        drop_msg = rcvd_msg.split('~')
-        debug_print(f'Drop message received for {drop_msg[1]}')
-        process_ips(list(SND_LIST), drop_msg[1], can_wr)
+        # if the message is an ack, add this ack to the list of acks
+        elif 'ACK~' in rcvd_msg:
+            acks.append(rcvd_msg)
 
-    # otherwise the message is a database update so add it to the in queue
-    # until it can be processed
-    else:
-        in_queue.put(rcvd_msg)
+        # If the message is a drop message then the server with the provided IP
+        # must be removed from the send list and this replica's successor
+        # and predecessor must be recalculated.
+        elif 'DROP~' in rcvd_msg:
+            drop_msg = rcvd_msg.split('~')
+            debug_print(f'Drop message received for {drop_msg[1]}')
+            process_ips(list(SND_LIST), drop_msg[1], can_wr)
 
-    # close the connection for receiving messages
-    conn.close()
+        # otherwise the message is a database update so add it to the in queue
+        # until it can be processed
+        else:
+            in_queue.put(rcvd_msg)
+
+        # close the connection for receiving messages
+        conn.close()
+    except ConnectionResetError:
+         continue
 #==============================================================================
 
 #==============================================================================
