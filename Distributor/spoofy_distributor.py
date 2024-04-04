@@ -515,6 +515,9 @@ def snd_msgs(out_queue: Queue, init: str, can_wr: Event):
                         # set up a drop message to be sent
                         out_queue.put('DROP~' + problem_ip)
 
+                        # set up token to be passed to the new successor
+                        out_queue.put(TOKEN_MSG)
+
             # otherwise the message is a database update or drop message that all
             # other replicas must receive, so send it to all other replicas
             else:
