@@ -15,6 +15,18 @@ Clone the project to a local directory:
 
  - `git clone https://github.com/Joey-mi/CPSC559_Distributed_Spoofy.git`
 
+## Setting up the Environment Variables
+Before running our website it's advised to take a look at the .env file and change the values to suit your system and database. The most important node to change would be MACHINE which is currently set to MacOs. If you're using Linux or Windows you need to change MACHINE to be 'Win' or 'Linux'.
+
+Next we need to download a few things to make sure the environment variables work as intended:
+
+- `pip install python-dotenv`
+- Install the Visual Studio Installer
+    - Then just select the Microsoft C++ Build Tools and download
+- `pip install netifaces`
+
+This should be all the setup require to use the environment variables. If after setting things up you want to hide your .env file simply add .env to the .gitignore file.
+
 ## Linking with MySQL
 The first thing that needs to be created is the `SpoofyDB` database. This can be done through the mysql command line utility.
 ```
