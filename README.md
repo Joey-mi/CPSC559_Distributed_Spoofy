@@ -15,6 +15,18 @@ Clone the project to a local directory:
 
  - `git clone https://github.com/Joey-mi/CPSC559_Distributed_Spoofy.git`
 
+## Setting up the Environment Variables
+Before running our website it's advised to take a look at the .env file and change the values to suit your system and database. The most important node to change would be MACHINE which is currently set to MacOs. If you're using Linux or Windows you need to change MACHINE to be 'Win' or 'Linux'.
+
+Next we need to download a few things to make sure the environment variables work as intended:
+
+- `pip install python-dotenv`
+- Install the Visual Studio Installer
+    - Then just select the Microsoft C++ Build Tools and download
+- `pip install netifaces`
+
+This should be all the setup require to use the environment variables. If after setting things up you want to hide your .env file simply add .env to the .gitignore file.
+
 ## Linking with MySQL
 The first thing that needs to be created is the `SpoofyDB` database. This can be done through the mysql command line utility.
 ```
@@ -91,3 +103,7 @@ There will need to be a '**primary**' replica that initiates the passing of the 
    - `python spoofy_distributor.py --no --proxy 10.13.83.202 10.13.105.49 10.13.145.125`
  - Example of a primary replica, with a proxy, and three replicas in the system
    - `python spoofy_distributor.py --prim --proxy 10.13.83.202 10.13.105.49 10.13.145.125`
+
+## Setting up HAProxy
+For this project we're using HAProxy for the load balancer. Install this from [https://www.haproxy.org/](https://www.haproxy.org/) on either a linux machine or VM (there is no Windows/Mac version as of yet) and copy our haproxy.cfg file into `/etc/haproxy`, overwriting the default configuration file. Make sure to edit the configuration file to use the correct ip addresses for your proxy and servers. Finally, run the load balancer **as Root** from the command line with:
+ - `haproxy -f /etc/haproxy/haproxy.cfg -db`
