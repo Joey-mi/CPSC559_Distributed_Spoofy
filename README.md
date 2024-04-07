@@ -103,3 +103,7 @@ There will need to be a '**primary**' replica that initiates the passing of the 
    - `python spoofy_distributor.py --no --proxy 10.13.83.202 10.13.105.49 10.13.145.125`
  - Example of a primary replica, with a proxy, and three replicas in the system
    - `python spoofy_distributor.py --prim --proxy 10.13.83.202 10.13.105.49 10.13.145.125`
+
+## Setting up HAProxy
+For this project we're using HAProxy for the load balancer. Install this from [https://www.haproxy.org/](https://www.haproxy.org/) on either a linux machine or VM (there is no Windows/Mac version as of yet) and copy our haproxy.cfg file into `/etc/haproxy`, overwriting the default configuration file. Make sure to edit the configuration file to use the correct ip addresses for your proxy and servers. Finally, run the load balancer **as Root** from the command line with:
+ - `haproxy -f /etc/haproxy/haproxy.cfg -db`
