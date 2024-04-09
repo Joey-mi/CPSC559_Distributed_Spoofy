@@ -19,7 +19,7 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"]) {
 
             
     if ($Premium) {
-        $premium = TRUE;
+        $isPremium = TRUE;
         $prepare = mysqli_prepare($con, $sql);
         if ($prepare) {
             $renew_date = date("Y-m-d", strtotime("+1 month"));
@@ -31,7 +31,7 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"]) {
         }
         $prepare -> close();
     } else {
-        $premium = FALSE;
+        $isPremium = FALSE;
         $prepare = mysqli_prepare($con, $sql);
         if ($prepare) {
             $prepare -> bind_param("s", $UserID);
