@@ -1,6 +1,6 @@
 # CPSC559_Spoofy
 
-A distributed web application for CPSC 559 - Databases
+A distributed web application for CPSC 559 - Distributed Systems
 
 ## Code Development
 
