@@ -26,7 +26,7 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"]) {
             $prepare -> bind_param("ss", '$renew_date', $UserID);
             // $prepare -> execute();
             // $_SESSION["IsPremium"] = true;
-            $sql = "UPDATE USER SET IsPremium='$premium', SubRenewDate='$renew_date' WHERE UserID='$UserID'";
+            $sql = "UPDATE USER SET IsPremium='$isPremium', SubRenewDate='$renew_date' WHERE UserID='$UserID'";
             sendQuery($sql);
         }
         $prepare -> close();
@@ -37,7 +37,7 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"]) {
             $prepare -> bind_param("s", $UserID);
             // $prepare -> execute();
             // $_SESSION["IsPremium"] = false;
-            $sql = "UPDATE USER SET IsPremium='$premium', SubRenewDate=NULL WHERE UserID='$UserID'";
+            $sql = "UPDATE USER SET IsPremium='$isPremium', SubRenewDate=NULL WHERE UserID='$UserID'";
             sendQuery($sql);
         }
         $prepare -> close();
