@@ -13,6 +13,7 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"]) {
         $_SESSION["IsPremium"] = true;
         $sql = "UPDATE USER SET IsPremium='$bool', SubRenewDate='$renew_date' WHERE UserID='$UserID'";
         echo $sql;
+        sendQuery($sql);
     } else {
         $bool = FALSE;
         $_SESSION["IsPremium"] = false;
