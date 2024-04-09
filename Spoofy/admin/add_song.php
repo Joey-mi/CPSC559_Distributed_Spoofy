@@ -42,7 +42,7 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
 			$filepath = str_replace("'", "\'", $filepath);
 			
 			// Prepare an insert statement
-			$sql = "INSERT INTO SONG (Title, Duration, MusicFile, TotalPlays, MonthlyPlays) VALUES ('$title', $duration, '$filepath', 0, 0)";
+			$sql = "INSERT INTO SONG (Title, Duration, MusicFile, TotalPlays, MonthlyPlays) VALUES ('$title', '$duration', '$filepath', 0, 0)";
 			sendQuery($sql);
 			header("Refresh:0; url=manage_songs.php");
 		}
