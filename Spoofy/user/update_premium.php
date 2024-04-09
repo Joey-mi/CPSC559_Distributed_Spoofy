@@ -19,25 +19,25 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"]) {
 
             
     if ($Premium) {
-        $isPremium = TRUE;
+        $bool = TRUE;
         $prepare = mysqli_prepare($con, $sql);
         if ($prepare) {
             $renew_date = date("Y-m-d", strtotime("+1 month"));
             $prepare -> bind_param("ss", '$renew_date', $UserID);
             // $prepare -> execute();
-            // $_SESSION["IsPremium"] = true;
-            $sql = "UPDATE USER SET IsPremium='$isPremium', SubRenewDate='$renew_date' WHERE UserID='$UserID'";
+            $_SESSION["IsPremium"] = true;
+            $sql = "UPDATE USER SET IsPremium='$bool', SubRenewDate='$renew_date' WHERE UserID='$UserID'";
             sendQuery($sql);
         }
         $prepare -> close();
     } else {
-        $isPremium = FALSE;
+        $bool = FALSE;
         $prepare = mysqli_prepare($con, $sql);
         if ($prepare) {
             $prepare -> bind_param("s", $UserID);
             // $prepare -> execute();
-            // $_SESSION["IsPremium"] = false;
-            $sql = "UPDATE USER SET IsPremium='$isPremium', SubRenewDate=NULL WHERE UserID='$UserID'";
+            $_SESSION["IsPremium"] = false;
+            $sql = "UPDATE USER SET IsPremium='$bool', SubRenewDate=NULL WHERE UserID='$UserID'";
             sendQuery($sql);
         }
         $prepare -> close();
