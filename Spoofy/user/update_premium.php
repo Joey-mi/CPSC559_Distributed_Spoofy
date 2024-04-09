@@ -1,5 +1,6 @@
 <?php
 include "../modules/mysql_connect.php";
+require_once("../modules/python_connect.php");
 
 if(!isset($_SESSION)) { session_start(); }
 if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"]) {
@@ -7,7 +8,7 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"]) {
     $UserID = $_SESSION["UserID"];
 
     if ($Premium) {
-        $sql = "UPDATE USER SET IsPremium=TRUE, SubRenewDate=$renew_date WHERE UserID=$UserID";
+        $sql = "UPDATE USER SET IsPremium=TRUE, SubRenewDate=? WHERE UserID=$UserID";
         sendQuery($sql);
     } else {
         $sql = "UPDATE USER SET IsPremium=FALSE, SubRenewDate=NULL WHERE UserID=$UserID";
