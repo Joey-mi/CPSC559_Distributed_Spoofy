@@ -1,5 +1,5 @@
 <?php
-require_once("../modules/python_connect.php");
+require_once("python_connect.php");
 function play_song($songID) {
     if(!isset($_SESSION)) { session_start(); }
     $_SESSION["Queue"] = array($songID);
