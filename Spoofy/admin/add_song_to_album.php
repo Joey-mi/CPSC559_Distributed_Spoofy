@@ -11,17 +11,7 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
 
 		$sql = "INSERT INTO ALBUM_CONTAINS VALUES($AlbumID, $SongID)";
 		sendQuery($sql);
-		// $sql = "INSERT INTO ALBUM_CONTAINS VALUES(?,?)";
-		// $prepare = mysqli_prepare($con, $sql);
-		if($prepare) {
-			// // Bind all values
-			// $prepare -> bind_param("ss", $AlbumID, $SongID);
-			// $prepare -> execute();
-			// $result = $prepare -> get_result();
-			header("Refresh:0; url=manage_songs.php");
-			// header("location: manage_songs.php");
-			$prepare -> close();
-		}
+		header("Refresh:0; url=manage_songs.php");
 	}
 } else {
     header("location: ../error.php");

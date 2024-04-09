@@ -10,17 +10,7 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
 	$ArtistName = $_GET["ArtistName"];
     $sql = "DELETE FROM WRITES WHERE SongID=$SongID AND ArtistID=$ArtistID";
     sendQuery($sql);
-    // $sql = "DELETE FROM WRITES WHERE SongID=? AND ArtistID=?";
-    // $prepare = mysqli_prepare($con, $sql);
-    // if ($prepare) {
-    //     $prepare -> bind_param("ss", $SongID, $ArtistID);
-    //     $prepare -> execute();
-    // }
-    if ($prepare) {
-        $prepare -> close();
-    }
     header("Refresh:0; url=remove_has.php?ArtistID=" . $ArtistID . "&ArtistName=" . $ArtistName . "");
-    // header("location: remove_has.php?ArtistID=" . $ArtistID . "&ArtistName=" . $ArtistName . "");
 } else {
     header("location: ../error.php");
 }

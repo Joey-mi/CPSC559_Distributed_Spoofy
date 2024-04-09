@@ -48,20 +48,7 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
 			// Prepare an insert statement
 			$sql = "INSERT INTO ARTIST (Name, About, ProfilePicture, BannerPicture, TotalPlays, MonthlyPlays) VALUES ('$name', '$about', '$pfp', '$bp', 0, 0)";
 			sendQuery($sql);
-			// $sql = "INSERT INTO ARTIST (Name, About, ProfilePicture, BannerPicture, TotalPlays, MonthlyPlays) VALUES (?, ?, ?, ?, 0, 0)";
-			// $prepare = mysqli_prepare($con, $sql);
-			if($prepare) {
-				
-				// // Bind all values
-				// $prepare -> bind_param("ssss", $name, $about, $pfp, $bp);
-				// $prepare -> execute();
-				// $result = $prepare -> get_result();
-				
-				// Redirect to login page after registering
-				header("Refresh:0; url=manage_artists.php"); 
-				// header("location: manage_artists.php");
-				$prepare -> close();
-			}
+			header("Refresh:0; url=manage_artists.php");
 		}
 		
 		// Close connection

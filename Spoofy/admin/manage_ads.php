@@ -46,19 +46,7 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
             // Prepare an insert statement
             $sql = "INSERT INTO ADVERTISEMENT (duration, company, soundfile) VALUES ($duration, '$company', '$soundfile')";
             sendQuery($sql);
-            // $sql = "INSERT INTO ADVERTISEMENT (duration, company, soundfile) VALUES (?, ?, ?)";
-            // $prepare = mysqli_prepare($con, $sql);
-            if($prepare) {
-                // $prepare -> bind_param("sss", $duration, $company, $soundfile);    //no idea what the ss does
-
-                // $prepare -> execute();
-                // $result = $prepare -> get_result();
-                
-                // Reload the page after adding an ad
-                header("Refresh:0; url=manage_ads.php");
-                // header("location: manage_ads.php");
-                $prepare -> close();
-            }
+            header("Refresh:0; url=manage_ads.php");
         }
 
     }

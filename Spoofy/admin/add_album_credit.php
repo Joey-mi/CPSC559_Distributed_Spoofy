@@ -11,17 +11,7 @@ if (isset($_SESSION["LoggedIn"]) && $_SESSION["LoggedIn"] && $_SESSION["Admin"])
 
 		$sql = "INSERT INTO HAS VALUES($AlbumID,$ArtistID)";
 		sendQuery($sql);
-		// $sql = "INSERT INTO HAS VALUES(?,?)";
-		// $prepare = mysqli_prepare($con, $sql);
-		if($prepare) {
-			// // Bind all values
-			// $prepare -> bind_param("ss", $AlbumID, $ArtistID);
-			// $prepare -> execute();
-			// $result = $prepare -> get_result();
-			header("Refresh:0; url=manage_albums.php"); 
-			// header("location: manage_albums.php");
-			$prepare -> close();
-		}
+		header("Refresh:0; url=manage_albums.php"); 
 	}
 } else {
     header("location: ../error.php");
